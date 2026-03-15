@@ -18,9 +18,6 @@ configurable types:SupabaseConfig supabase = ?;
 configurable types:R2Config r2 = ?;
 configurable string frontendUrl = ?;
 
-// Native AI Integration Configurations
-configurable string geminiKey = ?;
-configurable string hfToken = ?;
 
 // Asgardeo Configuration
 configurable string asgardeoOrgUrl = ?;

@@ -222,6 +222,9 @@ public type QuestionItem record {
 # + skillsScore - Skills component score
 # + interviewScore - Interview component score
 # + summaryFeedback - AI summary feedback for the decision
+# + experienceLevel - Candidate experience level from CV text
+# + detectedStack - Technical skills parsed from CV
+# + hfRelevanceSkipped - Count of auto-zeroed answers
 public type CandidateResponse record {
     string candidateId;
     string jobTitle;
@@ -234,6 +237,9 @@ public type CandidateResponse record {
     decimal skillsScore = 0d;
     decimal interviewScore = 0d;
     string? summaryFeedback = ();
+    string? experienceLevel = ();
+    string[] detectedStack = [];
+    int hfRelevanceSkipped = 0;
 };
 
 # Request payload to process a pass/fail decision.

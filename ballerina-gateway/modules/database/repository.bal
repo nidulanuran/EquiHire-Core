@@ -788,6 +788,18 @@ public client class Repository {
             }
         }
 
+        // 5. Get Candidate Context Tags (V2 Schema integration)
+        string ctxPath = string `/rest/v1/candidate_context_tags?job_id=${jobIdsFilter}&select=candidate_id,experience_level,detected_stack,hf_relevance_skipped`;
+        http:Response ctxResp = check self.httpClient->get(ctxPath, headers = self.headers, targetType = http:Response);
+        map<map<json>> ctxMap = {};
+        if ctxResp.statusCode < 300 {
+            json[] ctxs = <json[]>check ctxResp.getJsonPayload();
+            foreach json c in ctxs {
+                map<json> cm = <map<json>>c;
+                ctxMap[cm["candidate_id"].toString()] = cm;
+            }
+        }
+
         types:CandidateResponse[] results = [];
 
         foreach json p in profiles {
@@ -798,6 +810,7 @@ public client class Repository {
             string invId = pm["invitation_id"] is () ? "" : pm["invitation_id"].toString();
 
             map<json>? eData = evalMap[cId];
+            map<json>? ctxData = ctxMap[cId];
 
             decimal score = 0d;
             decimal cvScore = 0d;
@@ -811,6 +824,28 @@ public client class Repository {
                 skillsScore = eData["skills_score"] is () ? 0d : <decimal>eData["skills_score"];
                 interviewScore = eData["interview_score"] is () ? 0d : <decimal>eData["interview_score"];
                 feedback = eData["summary_feedback"] is () ? () : eData["summary_feedback"].toString();
+            }
+
+            string? experienceLevel = ();
+            string[] detectedStack = [];
+            int hfRelevanceSkipped = 0;
+
+            if ctxData is map<json> {
+                experienceLevel = ctxData["experience_level"] is () ? () : ctxData["experience_level"].toString();
+                
+                if ctxData["hf_relevance_skipped"] is int {
+                    hfRelevanceSkipped = <int>ctxData["hf_relevance_skipped"];
+                } else if ctxData["hf_relevance_skipped"] is string {
+                    var parsed = int:fromString(<string>ctxData["hf_relevance_skipped"]);
+                    if parsed is int { hfRelevanceSkipped = parsed; }
+                }
+
+                if ctxData["detected_stack"] is json[] {
+                    json[] ds = <json[]>ctxData["detected_stack"];
+                    foreach json tag in ds {
+                        detectedStack.push(tag.toString());
+                    }
+                }
             }
 
             string rawName = "Unknown Candidate";
@@ -832,7 +867,10 @@ public client class Repository {
                 cvScore: cvScore,
                 skillsScore: skillsScore,
                 interviewScore: interviewScore,
-                summaryFeedback: feedback
+                summaryFeedback: feedback,
+                experienceLevel: experienceLevel,
+                detectedStack: detectedStack,
+                hfRelevanceSkipped: hfRelevanceSkipped
             });
         }
 
