@@ -1,5 +1,8 @@
+/**
+ * Candidate welcome: CV upload and proceed to interview. Uses sessionStorage candidate data from InviteHandler.
+ */
 import { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Upload, FileText, CheckCircle, ArrowRight, ShieldCheck } from "lucide-react";
@@ -35,50 +38,25 @@ export default function CandidateWelcome() {
             setIsUploading(true);
 
             try {
-                // 1. Get Presigned URL
-                const { candidateId, objectKey } = await API.getUploadUrl();
-
-                // 2. Upload to R2 (Direct PUT)
-                // Note: CORS on R2 bucket must be configured to allow this origin/method.
-                /* 
-                const uploadResponse = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    body: selectedFile,
-                    headers: {
-                        'Content-Type': selectedFile.type,
-                    },
-                });
-
-                if (!uploadResponse.ok) {
-                    throw new Error('Upload to storage failed.');
+                if (!candidateData?.jobId) {
+                     throw new Error('Missing Job ID. Please re-open the invitation link.');
                 }
-                */
-                // BYPASS: Simulate successful upload
-                await new Promise(resolve => setTimeout(resolve, 1500));
 
-                // 3. Complete Upload & Link to Job
-                if (candidateData?.jobId) {
-                    await API.completeUpload({
-                        candidateId,
-                        objectKey,
-                        jobId: candidateData.jobId
-                    });
-                    setUploadComplete(true);
-                    // Store candidate ID for interview session
-                    sessionStorage.setItem('candidateId', candidateId);
-                } else {
-                    throw new Error('Missing Job ID. Please re-open the invitation link.');
-                }
+                // Append the multipart properties required by the Ballerina backend
+                const formData = new FormData();
+                formData.append("file", selectedFile);
+                formData.append("jobId", candidateData.jobId);
+
+                const response = await API.uploadCv(formData);
+
+                setUploadComplete(true);
+                // Store candidate ID for interview session
+                sessionStorage.setItem('candidateId', response.candidateId);
 
             } catch (err) {
-                console.error("Upload error (Bypassed for testing):", err);
-                // Mock success to allow user to proceed
-                setUploadComplete(true);
-                // Ensure we have a candidate ID so next page works
-                if (!sessionStorage.getItem('candidateId')) {
-                    sessionStorage.setItem('candidateId', `mock-candidate-${Date.now()}`);
-                }
-                // alert("Failed to upload CV. Please try again."); // Suppressed
+                console.error("Upload error:", err);
+                // Mock success is disabled, user must upload successfully
+                alert("Failed to upload CV. Please ensure you are uploading a valid PDF.");
             } finally {
                 setIsUploading(false);
             }

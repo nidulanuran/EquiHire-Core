@@ -1,7 +1,3 @@
-# AI Integrations
-geminiKey = "<YOUR_GEMINI_KEY>"
-hfToken = "<YOUR_HUGGINGFACE_TOKEN>"
-
 asgardeoTokenAudience = "EquiHire-Core"
 frontendUrl = "http://localhost:5173"
 asgardeoOrgUrl = "https://api.asgardeo.io/t/***********/oauth2/token"
@@ -24,3 +20,8 @@ secretAccessKey = "<YOUR_R2_SECRET_KEY>"
 accountId = "<YOUR_CLOUDFLARE_ACCOUNT_ID>"
 bucketName = "equihire"
 region = "auto"
+
+# AI Integrations
+[gateway.ai]
+geminiKey = "<YOUR_GEMINI_KEY>"
+hfToken = "<YOUR_HUGGINGFACE_TOKEN>"

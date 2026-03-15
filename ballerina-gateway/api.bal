@@ -1,6 +1,7 @@
 import ballerina/email;
 import ballerina/http;
 import ballerina/io;
+import ballerina/mime;
 import ballerina/time;
 import ballerina/uuid;
 import ballerinax/aws.s3;
@@ -18,9 +19,6 @@ configurable types:SupabaseConfig supabase = ?;
 configurable types:R2Config r2 = ?;
 configurable string frontendUrl = ?;
 
-// Native AI Integration Configurations
-configurable string geminiKey = ?;
-configurable string hfToken = ?;
 
 // Asgardeo Configuration
 configurable string asgardeoOrgUrl = ?;
@@ -240,64 +238,79 @@ service /api on apiListener {
 
     // --- Secure Candidate Upload (Vault & View) ---
 
-    // 1. Get Presigned URL for Upload (Client uploads directly to R2)
-    resource function get candidates/upload\-url() returns types:UploadUrlResponse|http:InternalServerError|error {
+    // Single Endpoint for CV Upload & Trigger AI Parsing
+    resource function post candidates/upload\-cv(http:Request request) returns json|http:InternalServerError|http:BadRequest|error {
+        io:println("CV Upload request received.");
+
+        // Extract Multipart Body
+        var bodyParts = check request.getBodyParts();
+        
+        byte[]? fileBytes = ();
+        string? jobId = ();
+
+        foreach var p in bodyParts {
+            mime:Entity part = <mime:Entity>p;
+            string contentDisposition = part.getContentDisposition().name;
+            if contentDisposition == "file" {
+                fileBytes = check part.getByteArray();
+            } else if contentDisposition == "jobId" {
+                jobId = check part.getText();
+            }
+        }
+
+        if fileBytes is () || jobId is () {
+            return <http:BadRequest>{
+                body: {"error": "Missing 'file' or 'jobId' in form data"}
+            };
+        }
+
         string candidateId = uuid:createType1AsString();
         string objectKey = "candidates/" + candidateId + "/resume.pdf";
 
-        // Generate Presigned URL
-        // Using manual V4 signing (utils.bal) because S3 client presignUrl is not available or version mismatch.
-        string|error signedUrlResult = generateR2PresignedUrl(
-                r2.accessKeyId,
-                r2.secretAccessKey,
-                r2.accountId,
-                r2.bucketName,
-                objectKey,
-                "PUT",
-                3600
-        );
+        // 1. Upload the raw PDF to Cloudflare R2
+        error? r2UploadErr = r2Client->createObject(r2.bucketName, objectKey, fileBytes);
 
-        if signedUrlResult is error {
-            io:println("Error generating presigned URL: ", signedUrlResult.message());
+        if r2UploadErr is error {
+            io:println("Failed to upload to R2: ", r2UploadErr.message());
             return http:INTERNAL_SERVER_ERROR;
         }
 
-        io:println("Generated Presigned URL for Candidate: ", candidateId);
-
-        return {
-            uploadUrl: signedUrlResult,
-            candidateId: candidateId,
-            objectKey: objectKey
-        };
-    }
-
-    // 2. Complete Upload & Trigger AI Parsing
-    resource function post candidates/complete\-upload(@http:Payload types:CompleteUploadRequest payload) returns http:Created|http:InternalServerError|error {
-        io:println("Upload completion signal received for: ", payload.candidateId);
-
-        // 1. Secure Layer: Save Identity Link (Identity -> R2 Key)
-        error? dbResult = dbClient->createSecureIdentity(payload.candidateId, payload.objectKey, payload.jobId);
+        // 2. Secure Layer: Save Identity Link (Identity -> R2 Key)
+        error? dbResult = dbClient->createSecureIdentity(candidateId, objectKey, jobId);
 
         if dbResult is error {
             io:println("DB Error: ", dbResult.message());
             return http:INTERNAL_SERVER_ERROR;
         }
 
-        // 3. Trigger Native AI Pipeline (Fire & Forget)
-        // Extract text via PDFBox and then pass to Gemini natively.
-        var parsePipeline = function() {
-            string|error rawText = ai:extractTextFromPdf(payload.objectKey);
-            if rawText is string {
-                json|error cvJson = ai:parseCvWithGemini(rawText);
-                if cvJson is json {
-                    // The CV is parsed successfully and is natively returned
-                    // Ready to be committed back to DB.
-                }
-            }
-        };
-        _ = start parsePipeline();
+        // 3. Trigger Native AI Pipeline (Synchronous Parse, Asynchronous Supabase Insertion)
+        // Extract text via PDFBox Java Interop directly from the byte array in memory
+        string|error rawText = ai:extractTextFromPdf(fileBytes);
+        if rawText is error {
+             io:println("PDF Extraction Failed: ", rawText.message());
+             return http:INTERNAL_SERVER_ERROR;
+        }
 
-        return http:CREATED;
+        json|error cvJson = ai:parseCvWithGemini(rawText);
+        if cvJson is error {
+             io:println("Gemini Parsing Failed: ", cvJson.message());
+             return http:INTERNAL_SERVER_ERROR;
+        }
+
+        // Parse successful - fire asynchronous DB injection worker
+        var savePipeline = function(json parsedData, string cId) {
+             io:println("Extracted CV Data: Saving to DB for candidate ", cId);
+             
+             error? saveErr = dbClient->saveCvParseResult(cId, parsedData);
+             if saveErr is error {
+                 io:println("Failed to save parsed CV data: ", saveErr.message());
+             } else {
+                 io:println("Successfully saved parsed CV data for candidate ", cId);
+             }
+        };
+        _ = start savePipeline(cvJson, candidateId);
+
+        return {"status": "success", "candidateId": candidateId};
     }
 
     // 3. Reveal Candidate (Get Secure Link from Python Vault)
