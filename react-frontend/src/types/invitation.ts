@@ -14,6 +14,7 @@ export interface Invitation {
   candidate_name?: string;
   candidateEmail?: string;
   candidate_email?: string;
+  email?: string;
   jobId: string;
   jobTitle?: string;
   job_title?: string;

@@ -38,7 +38,7 @@ export function useInvitations({ userId }: UseInvitationsOptions): UseInvitation
       const data = await API.getInvitations(userId);
       const formatted: InvitationHistoryItem[] = (data ?? []).map((record: Invitation) => ({
         id: record.id ?? '',
-        email: record.candidate_email ?? record.candidateEmail ?? (record as any).email ?? '',
+        email: record.candidate_email ?? record.candidateEmail ?? record.email ?? '',
         role: record.job_title ?? record.jobTitle ?? record.jobId ?? 'Unknown Role',
         time: record.created_at ? new Date(record.created_at).toLocaleDateString() : 'Just now',
         status: record.status ?? 'pending',
