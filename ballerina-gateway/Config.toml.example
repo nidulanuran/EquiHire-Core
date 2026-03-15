@@ -1,5 +1,6 @@
-pythonServiceUrl = "http://localhost:8000"
-# openAIKey removed as it was for voice transcription
+# AI Integrations
+geminiKey = "<YOUR_GEMINI_KEY>"
+hfToken = "<YOUR_HUGGINGFACE_TOKEN>"
 
 asgardeoTokenAudience = "EquiHire-Core"
 frontendUrl = "http://localhost:5173"
