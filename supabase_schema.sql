@@ -423,3 +423,440 @@ VALUES
     (uuid_generate_v4(), 'Standard Software Engineer Evaluation', 'Default rigorous technical grading criteria.', 'QUESTIONNAIRE', 'You are an expert technical interviewer. Evaluate the candidate''s answer based on: 1. Technical Accuracy (40%), 2. Code Quality & Best Practices (30%), 3. Problem Solving & Logic (30%). Provide constructive feedback.', true),
     (uuid_generate_v4(), 'Lenient Junior Developer Evaluation', 'Softer grading focused on potential and basic understanding.', 'QUESTIONNAIRE', 'You are an empathetic senior developer evaluating a junior. Focus on: 1. Core Understanding (50%), 2. Willingness to Learn (30%), 3. Syntax (20%). Point out good attempts even if the final code has minor bugs.', true),
     (uuid_generate_v4(), 'Strict Senior Architecture Evaluation', 'Harsh grading focusing on scalability and design patterns.', 'QUESTIONNAIRE', 'You are a strict Staff Engineer. Evaluate the candidate with extreme rigor on: 1. System Design & Scalability (40%), 2. Security (30%), 3. Edge Cases (30%). Reject answers that brute force the solution without considering big-O constraints.', true);
+
+-- ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-- ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-- ============================================================
+-- EquiHire — Missing Tables Migration v2
+-- CHANGES FROM v1:
+--   1. pii_entity_maps         — removed ner_model (Gemini does PII now)
+--   2. candidate_context_tags  — removed zero_shot_model (Gemini does level+stack)
+--                                added hf_relevance_skipped counter
+--   3. raw_answer_vault        — added hf_checked BOOLEAN
+--   4. grading_results         — added hf_gate_passed + hf_relevance_score
+--                                updated gemini_model default to gemini-2.5-flash
+--   5. New trigger             — trg_increment_hf_skipped
+--   6. recruiter_candidate_view — updated with new columns
+-- Run this AFTER your existing schema is applied.
+-- ============================================================
+
+
+-- ─────────────────────────────────────────────
+-- 1. CV PARSED SECTIONS
+--    Gemini returns all sections in one JSON blob.
+--    No changes from v1 except parser_version bump.
+-- ─────────────────────────────────────────────
+CREATE TABLE public.cv_parsed_sections (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    candidate_id        UUID REFERENCES public.anonymous_profiles(candidate_id) ON DELETE CASCADE,
+    invitation_id       UUID REFERENCES public.interview_invitations(id) ON DELETE CASCADE,
+    job_id              UUID REFERENCES public.jobs(id) ON DELETE CASCADE,
+
+    -- Full raw text extracted by PDFBox before Gemini
+    raw_text            TEXT,
+
+    -- Section buckets returned by Gemini CV parse call
+    education           JSONB,   -- [{ institution, degree, gpa, dates }]
+    work_experience     JSONB,   -- [{ role, org, duration, bullets }]
+    projects            JSONB,   -- [{ name, tech, outcome, dates }]
+    achievements        JSONB,   -- [{ title, issuer, year }]
+    technical_skills    JSONB,   -- [{ language, framework, tool }]
+    certificates        JSONB,   -- [{ name, issuer, year }]
+
+    r2_object_key       VARCHAR(1024),
+
+    parsed_at           TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    parser_version      VARCHAR(20) DEFAULT 'v2.0'
+);
+
+ALTER TABLE public.cv_parsed_sections ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Recruiters can view cv sections for their org"
+ON public.cv_parsed_sections FOR SELECT USING (
+    job_id IN (
+        SELECT id FROM public.jobs
+        WHERE organization_id IN (
+            SELECT organization_id FROM public.recruiters WHERE user_id = auth.uid()
+        )
+    )
+);
+
+CREATE POLICY "System can insert cv sections"
+ON public.cv_parsed_sections FOR INSERT WITH CHECK (true);
+
+CREATE INDEX idx_cv_sections_candidate ON public.cv_parsed_sections(candidate_id);
+CREATE INDEX idx_cv_sections_job       ON public.cv_parsed_sections(job_id);
+
+
+-- ─────────────────────────────────────────────
+-- 2. PII ENTITY MAP
+--    v2 CHANGE: removed ner_model column.
+--    PII is now extracted by Gemini during CV parse,
+--    not by HuggingFace bert-base-NER.
+-- ─────────────────────────────────────────────
+CREATE TABLE public.pii_entity_maps (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    candidate_id    UUID UNIQUE REFERENCES public.anonymous_profiles(candidate_id) ON DELETE CASCADE,
+
+    -- Entity array from Gemini CV parse response
+    -- e.g. [{ "token": "Hasitha Erandika", "label": "CANDIDATE_NAME" },
+    --        { "token": "SLIIT",            "label": "UNIVERSITY"     },
+    --        { "token": "Malabe",           "label": "CITY"           }]
+    entities        JSONB NOT NULL DEFAULT '[]',
+
+    -- Flat map used by lang.regexp.replaceAll in Ballerina
+    -- e.g. { "Hasitha Erandika": "[CANDIDATE_NAME]", "SLIIT": "[UNIVERSITY]" }
+    redaction_map   JSONB NOT NULL DEFAULT '{}',
+
+    -- v2: no ner_model column — source is always Gemini Flash
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.pii_entity_maps ENABLE ROW LEVEL SECURITY;
+
+-- No SELECT policy for recruiters — service role key only
+CREATE POLICY "System only insert pii map"
+ON public.pii_entity_maps FOR INSERT WITH CHECK (true);
+
+CREATE INDEX idx_pii_map_candidate ON public.pii_entity_maps(candidate_id);
+
+
+-- ─────────────────────────────────────────────
+-- 3. CANDIDATE CONTEXT TAGS
+--    v2 CHANGES:
+--    REMOVED zero_shot_model — level+stack now from Gemini
+--    ADDED   hf_relevance_skipped — counts auto-zeroed answers
+--    ADDED   UPDATE policy for trigger to work
+-- ─────────────────────────────────────────────
+CREATE TABLE public.candidate_context_tags (
+    id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    candidate_id            UUID UNIQUE REFERENCES public.anonymous_profiles(candidate_id) ON DELETE CASCADE,
+    job_id                  UUID REFERENCES public.jobs(id) ON DELETE CASCADE,
+
+    -- From Gemini CV parse — "junior" | "mid-level" | "senior"
+    experience_level        VARCHAR(20) NOT NULL,
+
+    -- Tech stack detected by Gemini from CV text
+    -- e.g. ["React", "Python", "Ballerina", "Supabase"]
+    detected_stack          JSONB NOT NULL DEFAULT '[]',
+
+    -- Estimated years parsed from CV date ranges
+    estimated_years         FLOAT,
+
+    -- v2 NEW: how many of this candidate's exam answers were
+    -- auto-zeroed by the HF relevance gate (high = suspicious)
+    hf_relevance_skipped    INTEGER DEFAULT 0,
+
+    created_at              TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.candidate_context_tags ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Recruiters can view context tags for their org"
+ON public.candidate_context_tags FOR SELECT USING (
+    job_id IN (
+        SELECT id FROM public.jobs
+        WHERE organization_id IN (
+            SELECT organization_id FROM public.recruiters WHERE user_id = auth.uid()
+        )
+    )
+);
+
+CREATE POLICY "System can insert context tags"
+ON public.candidate_context_tags FOR INSERT WITH CHECK (true);
+
+-- v2 NEW: needed for hf_relevance_skipped trigger
+CREATE POLICY "System can update context tags"
+ON public.candidate_context_tags FOR UPDATE USING (true);
+
+CREATE INDEX idx_context_tags_candidate ON public.candidate_context_tags(candidate_id);
+CREATE INDEX idx_context_tags_job       ON public.candidate_context_tags(job_id);
+
+
+-- ─────────────────────────────────────────────
+-- 4. EXAM SESSIONS
+--    No changes from v1.
+-- ─────────────────────────────────────────────
+CREATE TABLE public.exam_sessions (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    candidate_id    UUID REFERENCES public.anonymous_profiles(candidate_id) ON DELETE CASCADE,
+    invitation_id   UUID REFERENCES public.interview_invitations(id) ON DELETE CASCADE,
+    job_id          UUID REFERENCES public.jobs(id) ON DELETE CASCADE,
+
+    status          VARCHAR(30) DEFAULT 'in_progress',
+    -- 'in_progress' | 'submitted' | 'auto_submitted' | 'grading' | 'graded' | 'flagged'
+
+    started_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    submitted_at    TIMESTAMP WITH TIME ZONE,
+    graded_at       TIMESTAMP WITH TIME ZONE,
+
+    submission_type VARCHAR(20) DEFAULT 'manual',
+    -- 'manual' | 'timer_expired' | 'focus_loss_limit'
+
+    cheat_event_count   INTEGER DEFAULT 0,
+    is_flagged_cheating BOOLEAN DEFAULT false
+);
+
+ALTER TABLE public.exam_sessions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Recruiters can view sessions for their org"
+ON public.exam_sessions FOR SELECT USING (
+    job_id IN (
+        SELECT id FROM public.jobs
+        WHERE organization_id IN (
+            SELECT organization_id FROM public.recruiters WHERE user_id = auth.uid()
+        )
+    )
+);
+
+CREATE POLICY "System can insert sessions"
+ON public.exam_sessions FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "System can update sessions"
+ON public.exam_sessions FOR UPDATE USING (true);
+
+CREATE INDEX idx_exam_sessions_candidate ON public.exam_sessions(candidate_id);
+CREATE INDEX idx_exam_sessions_job       ON public.exam_sessions(job_id);
+CREATE INDEX idx_exam_sessions_status    ON public.exam_sessions(status);
+
+
+-- ─────────────────────────────────────────────
+-- 5. CHEAT EVENTS
+--    No changes from v1.
+-- ─────────────────────────────────────────────
+CREATE TABLE public.cheat_events (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id      UUID REFERENCES public.exam_sessions(id) ON DELETE CASCADE,
+    candidate_id    UUID REFERENCES public.anonymous_profiles(candidate_id) ON DELETE CASCADE,
+
+    event_type      VARCHAR(50) NOT NULL,
+    -- 'tab_switch' | 'focus_loss' | 'paste_attempt' |
+    -- 'right_click' | 'fullscreen_exit' | 'devtools_open'
+
+    occurred_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    details         JSONB
+);
+
+ALTER TABLE public.cheat_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Recruiters can view cheat events for their org"
+ON public.cheat_events FOR SELECT USING (
+    candidate_id IN (
+        SELECT candidate_id FROM public.anonymous_profiles
+        WHERE job_id IN (
+            SELECT id FROM public.jobs
+            WHERE organization_id IN (
+                SELECT organization_id FROM public.recruiters WHERE user_id = auth.uid()
+            )
+        )
+    )
+);
+
+CREATE POLICY "System can insert cheat events"
+ON public.cheat_events FOR INSERT WITH CHECK (true);
+
+CREATE INDEX idx_cheat_events_session   ON public.cheat_events(session_id);
+CREATE INDEX idx_cheat_events_candidate ON public.cheat_events(candidate_id);
+CREATE INDEX idx_cheat_events_type      ON public.cheat_events(event_type);
+
+
+-- ─────────────────────────────────────────────
+-- 6. RAW ANSWER VAULT
+--    v2 CHANGE: added hf_checked BOOLEAN.
+--    Records whether the HF relevance gate actually
+--    ran on this answer or was bypassed (503 fallback).
+--    Useful for audit — you know which answers had
+--    the extra safety net and which went straight to Gemini.
+-- ─────────────────────────────────────────────
+CREATE TABLE public.raw_answer_vault (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id      UUID REFERENCES public.exam_sessions(id) ON DELETE CASCADE,
+    candidate_id    UUID REFERENCES public.anonymous_profiles(candidate_id) ON DELETE CASCADE,
+    question_id     UUID REFERENCES public.questions(id) ON DELETE CASCADE,
+
+    -- Original unredacted answer — never shown to recruiter
+    raw_answer_text TEXT NOT NULL,
+
+    -- v2 NEW: did the HF gate run on this answer?
+    -- false = HF returned 503, gate skipped, went straight to Gemini
+    hf_checked          BOOLEAN DEFAULT false,
+
+    time_spent_seconds  INTEGER,
+    word_count          INTEGER,
+
+    saved_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.raw_answer_vault ENABLE ROW LEVEL SECURITY;
+
+-- No SELECT policy — service role key only. Raw text contains PII.
+CREATE POLICY "System can insert raw answers"
+ON public.raw_answer_vault FOR INSERT WITH CHECK (true);
+
+CREATE INDEX idx_raw_vault_session   ON public.raw_answer_vault(session_id);
+CREATE INDEX idx_raw_vault_candidate ON public.raw_answer_vault(candidate_id);
+CREATE INDEX idx_raw_vault_question  ON public.raw_answer_vault(question_id);
+
+
+-- ─────────────────────────────────────────────
+-- 7. GRADING RESULTS
+--    v2 CHANGES:
+--    ADDED   hf_gate_passed BOOLEAN DEFAULT true
+--            false = answer failed relevance check, auto-zeroed
+--    ADDED   hf_relevance_score FLOAT
+--            confidence from bart-large-mnli (null if gate skipped)
+--    CHANGED gemini_model default → 'gemini-2.5-flash'
+-- ─────────────────────────────────────────────
+CREATE TABLE public.grading_results (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id      UUID REFERENCES public.exam_sessions(id) ON DELETE CASCADE,
+    candidate_id    UUID REFERENCES public.anonymous_profiles(candidate_id) ON DELETE CASCADE,
+    question_id     UUID REFERENCES public.questions(id) ON DELETE CASCADE,
+
+    -- Final output shown to recruiter — redacted, never raw PII
+    redacted_answer TEXT NOT NULL,
+    score           INTEGER NOT NULL CHECK (score >= 0 AND score <= 10),
+    feedback        TEXT,
+
+    -- v2 NEW: HF relevance gate result
+    -- hf_gate_passed = false means score is 0, Gemini was NOT called
+    hf_gate_passed      BOOLEAN DEFAULT true,
+    hf_relevance_score  FLOAT,  -- null if gate was skipped (503 fallback)
+
+    -- Grading metadata
+    gemini_model        VARCHAR(50) DEFAULT 'gemini-2.5-flash',
+    grading_attempt     INTEGER DEFAULT 1,  -- 2 = retry after JSON bind fail
+    was_flagged         BOOLEAN DEFAULT false,
+
+    graded_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.grading_results ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Recruiters can view grading results for their org"
+ON public.grading_results FOR SELECT USING (
+    candidate_id IN (
+        SELECT candidate_id FROM public.anonymous_profiles
+        WHERE job_id IN (
+            SELECT id FROM public.jobs
+            WHERE organization_id IN (
+                SELECT organization_id FROM public.recruiters WHERE user_id = auth.uid()
+            )
+        )
+    )
+);
+
+CREATE POLICY "System can insert grading results"
+ON public.grading_results FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "System can update grading results"
+ON public.grading_results FOR UPDATE USING (true);
+
+CREATE INDEX idx_grading_results_session   ON public.grading_results(session_id);
+CREATE INDEX idx_grading_results_candidate ON public.grading_results(candidate_id);
+CREATE INDEX idx_grading_results_question  ON public.grading_results(question_id);
+
+
+-- ─────────────────────────────────────────────
+-- 8. TRIGGER — auto-increment cheat count
+--    No changes from v1.
+-- ─────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION increment_cheat_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE public.exam_sessions
+    SET cheat_event_count = cheat_event_count + 1
+    WHERE id = NEW.session_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_increment_cheat_count
+    AFTER INSERT ON public.cheat_events
+    FOR EACH ROW
+    EXECUTE FUNCTION increment_cheat_count();
+
+
+-- ─────────────────────────────────────────────
+-- 9. TRIGGER — auto-increment hf_relevance_skipped
+--    v2 NEW: fires when a grading_result is inserted
+--    with hf_gate_passed = false. Increments the
+--    counter on candidate_context_tags so the recruiter
+--    dashboard can surface suspicious candidates without
+--    running a subquery.
+-- ─────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION increment_hf_skipped()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.hf_gate_passed = false THEN
+        UPDATE public.candidate_context_tags
+        SET hf_relevance_skipped = hf_relevance_skipped + 1
+        WHERE candidate_id = NEW.candidate_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_increment_hf_skipped
+    AFTER INSERT ON public.grading_results
+    FOR EACH ROW
+    EXECUTE FUNCTION increment_hf_skipped();
+
+
+-- ─────────────────────────────────────────────
+-- 10. RECRUITER VIEW — v2 updated
+--     Added hf_gate_passed, hf_relevance_score,
+--     hf_relevance_skipped so dashboard shows which
+--     answers were auto-zeroed vs genuinely graded.
+-- ─────────────────────────────────────────────
+CREATE OR REPLACE VIEW public.recruiter_candidate_view AS
+SELECT
+    gr.candidate_id,
+    gr.session_id,
+    gr.question_id,
+    gr.redacted_answer,
+    gr.score,
+    gr.feedback,
+    gr.hf_gate_passed,
+    gr.hf_relevance_score,
+    gr.was_flagged,
+    gr.graded_at,
+    cct.experience_level,
+    cct.detected_stack,
+    cct.hf_relevance_skipped,
+    es.submission_type,
+    es.cheat_event_count,
+    es.is_flagged_cheating,
+    er.overall_score,
+    er.recommended_status
+FROM public.grading_results gr
+JOIN public.exam_sessions es            ON es.id = gr.session_id
+JOIN public.candidate_context_tags cct  ON cct.candidate_id = gr.candidate_id
+LEFT JOIN public.evaluation_results er  ON er.candidate_id = gr.candidate_id;
+
+
+-- ─────────────────────────────────────────────
+-- FULL CHANGE SUMMARY v1 → v2
+--
+-- pii_entity_maps
+--   REMOVED  ner_model VARCHAR(100)
+--
+-- candidate_context_tags
+--   REMOVED  zero_shot_model VARCHAR(100)
+--   ADDED    hf_relevance_skipped INTEGER DEFAULT 0
+--   ADDED    UPDATE RLS policy
+--
+-- raw_answer_vault
+--   ADDED    hf_checked BOOLEAN DEFAULT false
+--
+-- grading_results
+--   ADDED    hf_gate_passed BOOLEAN DEFAULT true
+--   ADDED    hf_relevance_score FLOAT
+--   CHANGED  gemini_model default: gemini-1.5-flash → gemini-2.5-flash
+--
+-- Triggers
+--   ADDED    trg_increment_hf_skipped on grading_results
+--
+-- recruiter_candidate_view
+--   ADDED    hf_gate_passed, hf_relevance_score, hf_relevance_skipped
+-- ─────────────────────────────────────────────

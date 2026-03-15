@@ -8,9 +8,9 @@ EquiHire is an AI-Native Blind Assessment Platform designed to act as an objecti
 
 ## Key Features
 
-*   **Context Extraction:** Analyzes candidate CVs to determine experience level (Junior/Senior) and adjust grading strictness.
-*   **Privacy Redaction:** Automatically identifies and redacts PII (Names, Universities) from written answers using **Gemini 1.5 Flash** to ensure bias-free evaluation.
-*   **Adaptive Scoring & Feedback:** Evaluates technical accuracy and generates personalized "Growth Reports" explaining knowledge gaps.
+*   **Context Extraction:** Parsed CVs automatically determine experience level (Junior/Senior) and map PII schemas through Gemini Flash.
+*   **Zero-Shot Relevance Gate:** Pre-redacted answers pass through a HuggingFace logic gate to filter irrelevant output, preserving compute.
+*   **Adaptive Scoring & Feedback:** Evaluates technical accuracy against pre-redacted data via LLM and generates personalized "Growth Reports".
 *   **Lockdown Assessment:** Secure, anti-cheating exam environment.
 
 **[Read the Full Introduction & Problem Statement](doc/introduction.md)**
@@ -20,13 +20,12 @@ EquiHire is an AI-Native Blind Assessment Platform designed to act as an objecti
 ## Tech Stack
 
 ![Ballerina](https://img.shields.io/badge/Ballerina-Swan%20Lake-57d9a3?style=flat-square&logo=ballerina)
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python)
 ![React](https://img.shields.io/badge/React-Vite-61DAFB?style=flat-square&logo=react)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase)
 ![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-F38020?style=flat-square&logo=cloudflare)
 
-*   **Gateway:** Ballerina
-*   **AI Engine:** Python (FastAPI, PyTorch)
+*   **Backend & AI Orchestration:** Ballerina
+*   **LLMs:** Google Gemini API (CV Parse, Grading) & HuggingFace (Relevance Gate)
 *   **Frontend:** React + TypeScript
 *   **Auth:** WSO2 Asgardeo
 
@@ -47,13 +46,10 @@ EquiHire is an AI-Native Blind Assessment Platform designed to act as an objecti
 # 1. Clone Repo
 git clone https://github.com/YourUsername/EquiHire-Core.git
 
-# 2. Run Gateway
+# 2. Run Backend
 cd ballerina-gateway && bal run
 
-# 3. Run AI Engine
-cd python-ai-engine && uvicorn main:app --reload
-
-# 4. Run Frontend
+# 3. Run Frontend
 cd react-frontend && npm run dev
 ```
 

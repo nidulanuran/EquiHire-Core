@@ -12,15 +12,15 @@ The technical recruitment landscape in Sri Lanka is currently flawed due to thre
 
 EquiHire is an AI-Native Blind Assessment Platform designed to act as an objective "Bias Firewall." Instead of a standard interview, candidates complete a secure, lockdown technical assessment. The system acts as an intermediary agent that sanitizes the candidate's written identity and scores their technical answers semantically, ensuring hiring decisions are based strictly on code quality and logic, not background.
 
-### Feature Name: The Context-Aware Assessment Engine (Powered by Gemini)
+### Feature Name: The Context-Aware Assessment Engine (Powered by Ballerina & External AI)
 
-**Technology:** Google Gemini 1.5 Flash API (LLM Orchestration)
+**Technology:** Ballerina Swan Lake, Google Gemini API, HuggingFace API.
 
-**Function:** The system utilizes a Single-Shot Chain-of-Thought Architecture to perform three cognitive tasks simultaneously within a secure pipeline:
+**Function:** The system utilizes robust integration orchestration to handle parsing and cognitive tasks natively using bounded records and retries:
 
-1.  **Context Extraction:** It analyzes the candidate's CV to determine their Experience Level (Junior vs. Senior) and adjust grading strictness dynamically.
-2.  **Privacy Redaction:** It identifies and redacts PII (Names, Universities) from written answers to ensure bias-free evaluation.
-3.  **Adaptive Scoring & Feedback:** It evaluates the technical accuracy of the answer against a model key and generates a personalized "Growth Report" explaining gaps in knowledge.
+1.  **CV Parsing & Context Extraction:** Apache PDFBox extracts raw text which is sent to Google Gemini Flash. Gemini structuralizes the sections, maps PII, and determines candidate Experience Level and Tech Stack in a single JSON blob.
+2.  **Zero-Shot Relevance Gate:** During the exam, candidate answers are safely vaulted, pre-redacted using the PII map, and passed to a HuggingFace `bart-large-mnli` gate. Low relevance answers (< 0.45 confidence) are auto-scored zero to bypass expensive computation.
+3.  **Adaptive Scoring & Feedback:** Relevant answers are sent to Google Gemini along with the candidate's experience level against a model key to generate a final redacted answer, score, and a "Growth Report".
 
 ## System Architecture
 
@@ -40,7 +40,8 @@ graph TB
         auth[WSO2 Asgardeo<br/>(Identity & Access Mgmt)]
         storage[(Cloudflare R2<br/>Secure Object Storage)]
         db[(PostgreSQL<br/>Supabase Managed DB)]
-        gemini[Google Gemini 1.5 Flash API<br/>(Unified AI Engine)]
+        gemini[Google Gemini API<br/>(CV Parse, Scoring & Feedback)]
+        huggingface[HuggingFace API<br/>(bart-large-mnli Relevance Gate)]
     end
 
     %% --- INTERNAL SYSTEM ---
@@ -50,13 +51,8 @@ graph TB
         webapp[Frontend SPA<br/>React + Vite + Tailwind]
         
         %% Backend Containers
-        subgraph Backend Microservices
-            gateway[API Gateway & Orchestrator<br/>Ballerina Swan Lake]
-            
-            subgraph IntelligenceEngine [Intelligence Engine Microservice - Python FastAPI]
-                controller[FastAPI Controller]
-                wrapper[Gemini Wrapper Service<br/>Prompt Engineering & Error Handling]
-            end
+        subgraph Backend Microservice
+            gateway[Unified API & AI Integrator<br/>Ballerina Swan Lake]
         end
     end
 
@@ -75,22 +71,24 @@ graph TB
     %% 3. Frontend to Gateway
     webapp -- "3. API Calls (REST/JSON)<br/>with Bearer Token" --> gateway
 
-    %% 4. Gateway Orchestration
-    gateway -- "4. Route Requests / Notifications" --> controller
-    gateway -- "Read/Write Job Data" --> db
+    %% 4. Backend Processing
+    gateway -- "Read/Write Job/Exam Data" --> db
 
-    %% 5. Secure Storage Flow (The Vault)
+    %% 5. Secure Storage & Extraction
     gateway -- "Generate Presigned URL" --> webapp
-    webapp -- "5. Direct Secure Upload (CV PDF)" --> storage
-    controller -- "Read CV for Parsing" --> storage
+    webapp -- "5a. Direct Secure Upload (CV PDF)" --> storage
+    gateway -- "5b. Read CV & PDFBox Text Extraction" --> storage
+    gateway -- "5c. Core CV Parse & PII Map" --> gemini
+    gemini -- "5d. Parsed Sections & Context JSON" --> gateway
 
-    %% 6. AI Processing Flow
-    controller -- "6. Orchestrate AI Tasks" --> wrapper
-    wrapper -- "7. Single-Shot CoT API Call" --> gemini
-    gemini -- "8. Context, Redaction, & Scoring" --> wrapper
+    %% 6. Grading AI Processing Flow
+    gateway -- "6a. Pre-redact & Relevance Gate" --> huggingface
+    huggingface -- "6b. Relevance Confidence Score" --> gateway
+    gateway -- "7a. Single-Shot Grading Call (If relevant)" --> gemini
+    gemini -- "7b. Scoring & Feedback JSON" --> gateway
 
     %% 7. Data Persistence Flow
-    controller -- "9. Save Redacted Text & Scores" --> db
+    gateway -- "8. Validate JSON & Save Redacted Text, Limits, Cheats & Scores" --> db
 
     %% Styling
     classDef user fill:#f9f,stroke:#333,stroke-width:2px,color:black;
@@ -106,10 +104,9 @@ graph TB
 
 ### Architectural Highlights
 
-1.  **Hybrid Cloud Approach:** We adopted a Hybrid Cloud architecture deployed on **WSO2 Choreo**, separating core logic from managed SaaS providers to ensure scalability and security.
-2.  **Microservices Core:**
-    *   **Ballerina Gateway:** Acts as the lightweight orchestrator, handling high-concurrency API traffic, routing, and integrating with Identity Providers (Asgardeo).
-    *   **Python Intelligence Engine:** A dedicated service acting as a secure wrapper for the Gemini API. It handles prompt engineering, error handling, and JSON validation.
-3.  **Unified AI Layer (Gemini 1.5 Flash):** A single powerful LLM handles all cognitive tasks (Context Extraction, Privacy Redaction, Adaptive Scoring) through a Chain-of-Thought architecture, simplifying the stack and reducing latency.
-4.  **Zero-Trust "Vault" Data Flow:** CVs are uploaded directly to **Cloudflare R2** via Presigned URLs. The backend never handles the raw file stream, minimizing the security surface area.
+1.  **Hybrid Cloud Approach:** We adopted a Hybrid Cloud architecture deployed on **WSO2 Choreo**, separating core logic from managed SaaS providers (Supabase, external AI APIs) to ensure scalability and security.
+2.  **Unified Microservice Core:**
+    *   **Ballerina Backend:** Acts as a powerful integration hub, handling high-concurrency API traffic, Java interoperability (Apache PDFBox for PDF reading), routing, and identity management with WSO2 Asgardeo. It heavily utilizes Ballerina's native JSON data-binding for strict schema enforcement and retry logic across LLM boundaries.
+3.  **Composite AI Layer:** An integration of varied models including **HuggingFace** connector models (`bart-large-mnli`) for fast zero-shot candidate answer screening alongside **Google Gemini Flash** for deep structural extraction (CV parsing) and final adaptive scoring feedback.
+4.  **Zero-Trust "Vault" Data Flow:** CVs are uploaded directly to **Cloudflare R2** via Presigned URLs. Raw answers are saved in an isolated answer vault *before* any AI processing begins, guaranteeing no candidate data is lost to downstream generation failures.
 

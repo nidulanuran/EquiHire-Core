@@ -60,7 +60,7 @@ Candidates should not have to create a complex account with a password.
     -   **Ballerina Gateway**:
         -   It validates the Candidate Session.
         -   **Verification Success**: Initializes the Lockdown Environment.
-        -   **Agentic Firewall**: The **Censor Agent** stands by to intercept and redact text submissions in real-time.
+        -   **Agentic Firewall**: The Ballerina backend prepares to intercept and redact text submissions on-the-fly via HuggingFace NER maps and Gemini prior to saving.
 
 2.  **The End of the Session**:
     -   **Action**: The interview finishes.

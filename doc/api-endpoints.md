@@ -2,13 +2,12 @@
 
 This document outlines all the REST API endpoints available in the EquiHire-Core system, including the Ballerina Gateway and Python AI Engine, with detailed instructions on how to test them using Postman.
 
-## Base URLs
+## Base URL
 - **Gateway API (Public & Admin)**: `http://localhost:9092/api`
-- **Python AI Engine (Internal Vault)**: `http://localhost:8000`
 
 ---
 
-## 1. Ballerina Gateway Endpoints (Port 9092)
+## Ballerina Gateway Endpoints (Port 9092)
 
 ### 1.1. Organizations
 
@@ -192,7 +191,21 @@ This document outlines all the REST API endpoints available in the EquiHire-Core
 - **Postman Details**:
   - Method: `GET`
 
-#### Evaluate Candidate Answer (Proxy to AI)
+#### Parse CV (Trigger Gemini Extraction)
+- **URL**: `POST http://localhost:9092/api/candidates/parse-cv`
+- **Postman Details**:
+  - Method: `POST`
+  - Body Type: `raw` (JSON)
+  - Payload:
+    ```json
+    {
+      "candidate_id": "cand_999",
+      "r2_object_key": "candidates/cand_999/resume.pdf",
+      "job_id": "job_111"
+    }
+    ```
+
+#### Evaluate Candidate Answer (Relevance Gate & Gemini Grading)
 - **URL**: `POST http://localhost:9092/api/evaluate`
 - **Postman Details**:
   - Method: `POST`
@@ -202,9 +215,21 @@ This document outlines all the REST API endpoints available in the EquiHire-Core
     {
       "candidateAnswer": "REST uses standard HTTP methods.",
       "question": "Explain REST",
-      "modelAnswer": "REST is an architectural style utilizing HTTP methods...",
-      "experienceLevel": "Junior",
-      "strictness": "Moderate"
+      "modelAnswer": "REST is an architectural style utilizing HTTP methods..."
+    }
+    ```
+
+#### Generate Rejection Email
+- **URL**: `POST http://localhost:9092/api/candidates/generate-rejection-email`
+- **Postman Details**:
+  - Method: `POST`
+  - Body Type: `raw` (JSON)
+  - Payload:
+    ```json
+    {
+      "candidate_name": "John Doe",
+      "job_title": "Senior Backend Engineer",
+      "summary_feedback": "Lacked experience with Microservices and Kubernetes deployment."
     }
     ```
 
@@ -273,61 +298,3 @@ This document outlines all the REST API endpoints available in the EquiHire-Core
   - Method: `GET`
 
 ---
-
-## 2. Python AI Engine Endpoints (Port 8000)
-*(Usually internal, but accessible for testing)*
-
-#### Health Check
-- **URL**: `GET http://localhost:8000/`
-- **Postman Details**:
-  - Method: `GET`
-
-#### Parse CV
-- **URL**: `POST http://localhost:8000/parse/cv`
-- **Postman Details**:
-  - Method: `POST`
-  - Body Type: `raw` (JSON)
-  - Payload:
-    ```json
-    {
-      "candidate_id": "cand_999",
-      "r2_object_key": "candidates/cand_999/resume.pdf",
-      "job_id": "job_111",
-      "required_skills": ["Python", "FastAPI"]
-    }
-    ```
-
-#### Evaluate Answer & Privacy Redaction
-- **URL**: `POST http://localhost:8000/evaluate`
-- **Postman Details**:
-  - Method: `POST`
-  - Body Type: `raw` (JSON)
-  - Payload:
-    ```json
-    {
-      "candidate_answer": "I worked at Google in New York.",
-      "question": "Where did you work?",
-      "model_answer": "They worked at a tech company.",
-      "experience_level": "Junior",
-      "strictness": "Moderate"
-    }
-    ```
-
-#### Generate Rejection Email
-- **URL**: `POST http://localhost:8000/generate/rejection-email`
-- **Postman Details**:
-  - Method: `POST`
-  - Body Type: `raw` (JSON)
-  - Payload:
-    ```json
-    {
-      "candidate_name": "John Doe",
-      "job_title": "Senior Backend Engineer",
-      "summary_feedback": "Lacked experience with Microservices and Kubernetes deployment."
-    }
-    ```
-
-#### Reveal Secure Candidates PDF Link
-- **URL**: `GET http://localhost:8000/reveal/{candidate_id}`
-- **Postman Details**:
-  - Method: `GET`
