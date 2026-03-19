@@ -166,7 +166,10 @@
   }
   
   .text-gradient {
-    @apply bg-clip-text text-transparent premium-gradient;
+    @apply bg-clip-text text-transparent;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+    background-size: 200% 200%;
+    animation: gradient-flow 15s ease infinite;
   }
   
   .animate-float {

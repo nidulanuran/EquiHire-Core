@@ -78,12 +78,14 @@ function runGradingPipeline(string candidateId, types:SubmitAssessmentPayload pa
     map<json>|error piiMapResult = repositories:getPiiRedactionMap(candidateId);
     map<json> piiMap = piiMapResult is map<json> ? piiMapResult : {};
 
+    string violationsSummary = summarizeViolations(payload.cheatEvents);
+
     float totalScore = 0.0;
     int graded = 0;
 
     foreach types:AnswerSubmission ans in payload.answers {
         types:GradingResult|error result = gradeOneAnswer(
-            payload.sessionId, candidateId, ans, questions, expLevel, piiMap, rawVaultIds);
+            payload.sessionId, candidateId, ans, questions, expLevel, piiMap, rawVaultIds, violationsSummary);
         if result is types:GradingResult {
             totalScore += <float>result.score;
             graded += 1;
@@ -91,41 +93,6 @@ function runGradingPipeline(string candidateId, types:SubmitAssessmentPayload pa
     }
 
     aggregateAndFinalize(candidateId, payload.jobId, payload.sessionId, totalScore, graded);
-}
-
-function gradeOneAnswer(string sessionId, string candidateId,
-                        types:AnswerSubmission ans,
-                        types:QuestionItem[] questions, string expLevel,
-                        map<json> piiMap, map<string> rawVaultIds) returns types:GradingResult|error {
-    types:QuestionItem? matchedQ = findQuestion(ans.questionId, questions);
-    if matchedQ is () {
-        log:printWarn("Question not found for answer",
-                      questionId = ans.questionId, sessionId = sessionId);
-        return error("Question not found: " + ans.questionId);
-    }
-
-    string redactedAns = utils:maskPii(ans.answerText, piiMap);
-
-    [boolean, float?] [passed, hfScore] = runHfGate(redactedAns, sessionId, ans.questionId);
-
-    string? vaultId = rawVaultIds[ans.questionId];
-    if vaultId is string {
-        error? hfErr = repositories:markRawAnswerHfChecked(vaultId);
-        if hfErr is error {
-            log:printError("markRawAnswerHfChecked failed", 'error = hfErr, vaultId = vaultId);
-        }
-    }
-
-    types:GradingResult result = buildGradingResult(
-        sessionId, candidateId, ans.questionId, redactedAns,
-        matchedQ, expLevel, passed, hfScore);
-
-    error? insErr = repositories:insertGradingResult(result);
-    if insErr is error {
-        log:printError("insertGradingResult failed",
-                       'error = insErr, candidateId = candidateId, questionId = ans.questionId);
-    }
-    return result;
 }
 
 function findQuestion(string questionId,
@@ -152,16 +119,65 @@ function runHfGate(string redactedAns, string sessionId,
     }
     foreach var item in res {
         if item.label == constants:HF_LABEL_RELEVANT {
-            float score = item.score ?: 0.0;
+            float score = <float>(item.score ?: 0.0);
             return [score >= constants:HF_RELEVANCE_THRESHOLD, score];
         }
     }
     return [false, 0.0];
 }
 
+function gradeOneAnswer(string sessionId, string candidateId,
+                        types:AnswerSubmission ans,
+                        types:QuestionItem[] questions, string expLevel,
+                        map<json> piiMap, map<string> rawVaultIds,
+                        string violationsSummary) returns types:GradingResult|error {
+    types:QuestionItem? matchedQ = findQuestion(ans.questionId, questions);
+    if matchedQ is () {
+        log:printWarn("Question not found for answer",
+                      questionId = ans.questionId, sessionId = sessionId);
+        return error("Question not found: " + ans.questionId);
+    }
+
+    string redactedAns = utils:maskPii(ans.answerText, piiMap);
+
+    [boolean, float?] [passed, hfScore] = runHfGate(redactedAns, sessionId, ans.questionId);
+
+    string? vaultId = rawVaultIds[ans.questionId];
+    if vaultId is string {
+        error? hfErr = repositories:markRawAnswerHfChecked(vaultId);
+        if hfErr is error {
+            log:printError("markRawAnswerHfChecked failed", 'error = hfErr, vaultId = vaultId);
+        }
+    }
+
+    types:GradingResult result = buildGradingResult(
+        sessionId, candidateId, ans.questionId, redactedAns,
+        matchedQ, expLevel, passed, hfScore, violationsSummary);
+
+    error? insErr = repositories:insertGradingResult(result);
+    if insErr is error {
+        log:printError("insertGradingResult failed",
+                       'error = insErr, candidateId = candidateId, questionId = ans.questionId);
+    }
+    return result;
+}
+
+function summarizeViolations(types:CheatEventItem[] events) returns string {
+    if events.length() == 0 { return "No integrity issues detected."; }
+    map<int> counts = {};
+    foreach var e in events {
+        counts[e.eventType] = (counts[e.eventType] ?: 0) + 1;
+    }
+    string result = "";
+    foreach [string, int] [t, c] in counts.entries() {
+        result += string `${t} (${c.toString()}), `;
+    }
+    return result;
+}
+
 function buildGradingResult(string sessionId, string candidateId, string questionId,
-                            string redactedAns, types:QuestionItem q, string expLevel,
-                            boolean hfPassed, float? hfScore) returns types:GradingResult {
+                             string redactedAns, types:QuestionItem q, string expLevel,
+                             boolean hfPassed, float? hfScore, string violationsSummary) returns types:GradingResult {
     if !hfPassed {
         return {
             sessionId: sessionId, candidateId: candidateId, questionId: questionId,
@@ -170,14 +186,14 @@ function buildGradingResult(string sessionId, string candidateId, string questio
             hfRelevanceScore: hfScore, wasFlagged: false
         };
     }
-    return callGeminiGrader(sessionId, candidateId, questionId, redactedAns, q, expLevel, hfScore);
+    return callGeminiGrader(sessionId, candidateId, questionId, redactedAns, q, expLevel, hfScore, violationsSummary);
 }
 
 function callGeminiGrader(string sessionId, string candidateId, string questionId,
-                          string redactedAns, types:QuestionItem q, string expLevel,
-                          float? hfScore) returns types:GradingResult {
+                           string redactedAns, types:QuestionItem q, string expLevel,
+                           float? hfScore, string violationsSummary) returns types:GradingResult {
     string prompt = utils:buildGradingPrompt(
-        redactedAns, q.questionText, q.sampleAnswer, expLevel, "Moderate");
+        redactedAns, q.questionText, q.sampleAnswer, expLevel, "Moderate", violationsSummary);
     string url = string `/models/${constants:GEMINI_MODEL}:generateContent?key=${config:geminiApiKey}`;
 
     int finalScore = constants:AUTO_ZERO_SCORE;
@@ -276,11 +292,33 @@ function parseScore(json scoreVal) returns int {
 function aggregateAndFinalize(string candidateId, string jobId,
                               string sessionId, float total, int count) {
     if count > 0 {
-        float avg = (total / <float>count) * constants:SCORE_SCALE_FACTOR;
-        string recStatus = avg >= constants:PASS_THRESHOLD
+        float interviewAvg = (total / <float>count) * constants:SCORE_SCALE_FACTOR;
+        
+        // Fetch existing sub-scores to maintain them
+        float cvScore = 0.0;
+        float skillsScore = 0.0;
+        
+        var existingEval = repositories:getCandidateEvaluation(candidateId);
+        if existingEval is record {|decimal overallScore; decimal cvScore; decimal skillsScore; decimal interviewScore; string summaryFeedback;|} {
+            cvScore = <float>existingEval.cvScore;
+            skillsScore = <float>existingEval.skillsScore;
+        }
+        
+        float overallScore = (cvScore * 0.3) + (skillsScore * 0.2) + (interviewAvg * 0.5);
+        if cvScore == 0.0 && skillsScore == 0.0 {
+            overallScore = interviewAvg; // Fallback if no CV screening was done
+        }
+
+        string recStatus = overallScore >= constants:PASS_THRESHOLD
             ? constants:STATUS_SHORTLISTED : constants:STATUS_REJECTED;
-        string summary = "Automated interview assessment completed. Candidate scored " + avg.toString() + "/100.";
-        error? evalErr = repositories:insertEvaluationResult(candidateId, jobId, avg, summary, recStatus);
+            
+        string summary = "Automated interview assessment completed. " + 
+                         "Overall: " + overallScore.toString() + "/100. " +
+                         "(Interview: " + interviewAvg.toString() + ")";
+
+        error? evalErr = repositories:insertEvaluationResult(
+            candidateId, jobId, cvScore, skillsScore, interviewAvg, overallScore, summary, recStatus);
+            
         if evalErr is error {
             log:printError("insertEvaluationResult failed",
                            'error = evalErr, candidateId = candidateId, sessionId = sessionId);
@@ -319,14 +357,20 @@ public function evaluateCandidateCv(string candidateId) returns json|error {
         }
     }
 
+    // 2.1 Get Required Skills for the Job
+    string[]|error requiredSkills = repositories:getJobRequiredSkills(jobId);
+    string skillsList = requiredSkills is string[] ? utils:joinStrings(requiredSkills, ", ") : "Not specified";
+
     // 3. Get CV Text
     string|error cvText = repositories:getCvRawText(candidateId);
     if cvText is error || cvText == "" { return error("CV text is empty or missing for candidate: " + candidateId); }
 
     // 4. Construct Gemini Prompt
     string prompt = "You are an expert technical recruiter evaluating an applicant's CV against the job's strict marking criteria. \n" +
-                    "Return ONLY a valid JSON object in this exact structure: {\"score\": <0-100 integer>, \"feedback\": \"<detailed constructive feedback explaining the match>\"}.\n\n";
+                    "Evaluate the candidate's core background (CV score) and their match for the specific required skills (Skills score).\n" +
+                    "Return ONLY a valid JSON object in this exact structure: {\"score\": <0-100 integer>, \"skills_score\": <0-100 integer>, \"feedback\": \"<detailed constructive feedback>\"}.\n\n";
     prompt += "Marking Criteria:\n" + markingCriteria + "\n\n";
+    prompt += "Required Skills:\n" + skillsList + "\n\n";
     prompt += "Candidate CV Text:\n" + cvText;
 
     // 5. Call Gemini
@@ -339,18 +383,24 @@ public function evaluateCandidateCv(string candidateId) returns json|error {
     }
 
     if aiEval is map<json> {
-        int finalScore = parseScore(aiEval["score"]);
+        log:printInfo("Gemini CV evaluation response", response = aiEval.toString());
+        int cvScore = parseScore(aiEval["score"]);
+        int skillsScore = parseScore(aiEval["skills_score"]);
+        log:printInfo("Parsed CV scores", candidateId = candidateId, cvScore = cvScore, skillsScore = skillsScore);
+        
         string finalFeedback = aiEval["feedback"] is string ? <string>aiEval["feedback"] : "CV successfully evaluated.";
-        string recStatus = <float>finalScore >= constants:PASS_THRESHOLD ? constants:STATUS_SHORTLISTED : constants:STATUS_REJECTED;
+        
+        float overallScore = (<float>cvScore * 0.6) + (<float>skillsScore * 0.4);
+        string recStatus = overallScore >= constants:PASS_THRESHOLD ? constants:STATUS_SHORTLISTED : constants:STATUS_REJECTED;
         
         // 6. Save or update evaluation_results
-        error? upsertErr = repositories:upsertCvEvaluationResult(candidateId, jobId, <float>finalScore, finalFeedback, recStatus);
+        error? upsertErr = repositories:upsertCvEvaluationResult(candidateId, jobId, <float>cvScore, <float>skillsScore, finalFeedback, recStatus);
         if upsertErr is error {
             log:printError("upsertCvEvaluationResult failed", 'error = upsertErr, candidateId = candidateId);
             return error("Failed to save CV evaluation results to database");
         }
         
-        return {"score": finalScore, "feedback": finalFeedback, "status": recStatus};
+        return {"score": cvScore, "skills_score": skillsScore, "feedback": finalFeedback, "status": recStatus};
     } else {
         log:printError("Gemini grading failed after retry — cannot evaluate CV", candidateId = candidateId);
         return error("AI Evaluation failed to return a valid result.");

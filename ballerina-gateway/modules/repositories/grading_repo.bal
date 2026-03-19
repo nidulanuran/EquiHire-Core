@@ -37,33 +37,35 @@ public function insertGradingResult(types:GradingResult result) returns error? {
 // Evaluation Aggregates
 // ---------------------------------------------------------------------------
 
-public function insertEvaluationResult(string candidateId, string jobId, float interviewScore,
+public function insertEvaluationResult(string candidateId, string jobId, float cvScore, float skillsScore,
+                                       float interviewScore, float overallScore,
                                        string summaryFeedback, string recommendedStatus) returns error? {
     json payload = {
         "candidate_id":       candidateId,
         "job_id":             jobId,
-        "cv_score":           0.0,
-        "skills_score":       0.0,
+        "cv_score":           cvScore,
+        "skills_score":       skillsScore,
         "interview_score":    interviewScore,
-        "overall_score":      interviewScore,
+        "overall_score":      overallScore,
         "summary_feedback":   summaryFeedback,
         "recommended_status": recommendedStatus
     };
     http:Response response = check clients:supabaseHttpClient->post(
-        "/rest/v1/evaluation_results", payload, headers = clients:getSupabaseServiceHeaders());
+        "/rest/v1/evaluation_results", payload, headers = clients:getSupabaseUpsertHeaders());
     if response.statusCode >= 300 {
         json err = check response.getJsonPayload();
         return error("insertEvaluationResult failed for candidate " + candidateId + ": " + err.toString());
     }
 }
 
-public function upsertCvEvaluationResult(string candidateId, string jobId, float cvScore,
+public function upsertCvEvaluationResult(string candidateId, string jobId, float cvScore, float skillsScore,
                                          string summaryFeedback, string recommendedStatus) returns error? {
     json payload = {
         "candidate_id":       candidateId,
         "job_id":             jobId,
         "cv_score":           cvScore,
-        "overall_score":      cvScore, // Simplified for now
+        "skills_score":       skillsScore,
+        "overall_score":      (cvScore * 0.6) + (skillsScore * 0.4), // Initial weighted score
         "summary_feedback":   summaryFeedback,
         "recommended_status": recommendedStatus
     };

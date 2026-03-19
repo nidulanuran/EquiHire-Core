@@ -102,6 +102,23 @@ public function getEvaluationTemplateIdForJob(string jobId) returns string?|erro
     return evalId is () ? () : evalId.toString();
 }
 
+public function getJobRequiredSkills(string jobId) returns string[]|error {
+    string path = string `/rest/v1/jobs?select=required_skills&id=eq.${jobId}`;
+    http:Response response = check clients:supabaseHttpClient->get(
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+    if response.statusCode >= 300 { return error("getJobRequiredSkills failed"); }
+    json[] rows = <json[]>check response.getJsonPayload();
+    if rows.length() == 0 { return error("Job not found: " + jobId); }
+    json skills = (<map<json>>rows[0])["required_skills"];
+    string[] result = [];
+    if skills is json[] {
+        foreach json s in skills {
+            result.push(s.toString());
+        }
+    }
+    return result;
+}
+
 // ---------------------------------------------------------------------------
 // Questions
 // ---------------------------------------------------------------------------

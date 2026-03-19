@@ -176,22 +176,27 @@ public function getCandidateContact(string candidateId) returns record {|string 
     return {candidateName: inv["candidate_name"].toString(), candidateEmail: inv["candidate_email"].toString(), jobTitle: inv["job_title"].toString()};
 }
 
-public function getCandidateEvaluation(string candidateId) returns record {|decimal overallScore; string summaryFeedback;|}|error {
-    string path = string `/rest/v1/evaluation_results?candidate_id=eq.${candidateId}&select=overall_score,summary_feedback`;
+public function getCandidateEvaluation(string candidateId) returns record {|decimal overallScore; decimal cvScore; decimal skillsScore; decimal interviewScore; string summaryFeedback;|}|error {
+    string path = string `/rest/v1/evaluation_results?candidate_id=eq.${candidateId}&select=overall_score,cv_score,skills_score,interview_score,summary_feedback`;
     http:Response resp = check clients:supabaseHttpClient->get(
         path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if resp.statusCode >= 300 { return error("getCandidateEvaluation failed for " + candidateId); }
     json[] evals = <json[]>check resp.getJsonPayload();
     if evals.length() == 0 { return error("Evaluation not found for candidate " + candidateId); }
     map<json> e = <map<json>>evals[0];
-    decimal score = 0d;
-    var sVal = e["overall_score"];
-    if sVal != () {
-        decimal|error ps = decimal:fromString(sVal.toString());
-        if ps is decimal { score = ps; }
-    }
+    
+    decimal overall = 0d;
+    decimal cv = 0d;
+    decimal skills = 0d;
+    decimal interview = 0d;
+
+    overall = e["overall_score"] is () ? 0d : <decimal>e["overall_score"];
+    cv = e["cv_score"] is () ? 0d : <decimal>e["cv_score"];
+    skills = e["skills_score"] is () ? 0d : <decimal>e["skills_score"];
+    interview = e["interview_score"] is () ? 0d : <decimal>e["interview_score"];
+    
     string feedback = e["summary_feedback"] is () ? "" : e["summary_feedback"].toString();
-    return {overallScore: score, summaryFeedback: feedback};
+    return {overallScore: overall, cvScore: cv, skillsScore: skills, interviewScore: interview, summaryFeedback: feedback};
 }
 
 public function updateCandidateStatus(string candidateId, string newStatus) returns error? {

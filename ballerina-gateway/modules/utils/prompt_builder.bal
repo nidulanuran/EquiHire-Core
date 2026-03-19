@@ -22,7 +22,7 @@ ${rawCvText}`;
 
 public function buildGradingPrompt(string candidateAnswer, string question,
                                     string sampleAnswer, string experienceLevel,
-                                    string strictness) returns string {
+                                    string strictness, string violationsSummary) returns string {
     return string `You are a fair, unbiased technical interviewer. Grade the following candidate answer.
 
 Question: ${question}
@@ -32,13 +32,15 @@ Candidate Answer: ${candidateAnswer}
 Context:
 - Experience Level: ${experienceLevel}
 - Strictness: ${strictness}
+- Security/Integrity Violations: ${violationsSummary}
 
 Instructions:
 1. Score from 0-10 based on technical accuracy, completeness, and clarity
 2. Adjust expectations based on experience level
-3. Provide constructive feedback focusing on growth areas
-4. If the answer contains any PII (names, emails, etc.), redact it in your response
-5. Return ONLY valid JSON with these fields:
+3. IF there are significant security violations (e.g. frequent tab switching), lower the score proportionately or flag it
+4. Provide constructive feedback focusing on growth areas
+5. If the answer contains any PII (names, emails, etc.), redact it in your response
+6. Return ONLY valid JSON with these fields:
    {"score": <number>, "feedback": "<string>", "redacted_answer": "<string>"}`;
 }
 
@@ -57,4 +59,15 @@ Guidelines:
 - Keep it concise (2-3 paragraphs)
 - End with encouragement to reapply in the future
 - Return ONLY the email body text (no subject line, no greeting/signature — those are handled by the template)`;
+}
+// Helper to join string arrays.
+public function joinStrings(string[] parts, string separator) returns string {
+    string result = "";
+    foreach int i in 0 ..< parts.length() {
+        result += parts[i];
+        if i < parts.length() - 1 {
+            result += separator;
+        }
+    }
+    return result;
 }

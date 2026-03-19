@@ -214,7 +214,7 @@ service /api on apiListener {
         if qs is error {
             return <http:InternalServerError>{body: {"error": qs.message()}};
         }
-        return qs;
+        return <json>qs;
     }
 
     resource function put questions/[string questionId](
