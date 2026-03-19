@@ -7,8 +7,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { API } from '@/lib/api';
 import type { Job, Question } from '@/types';
 
-/** Job with optional organization_id for question creation. */
-export type JobWithOrg = Job & { organization_id?: string };
+/** Job with optional organizationId for question creation. */
+export type JobWithOrg = Job & { organizationId?: string };
 
 export interface UseQuestionsOptions {
   userId: string | undefined;
@@ -100,12 +100,10 @@ export function useQuestions({ userId }: UseQuestionsOptions): UseQuestionsResul
         await API.createJobQuestions([
           {
             jobId: params.jobId,
-            organizationId: params.organizationId,
             questionText: params.questionText,
             sampleAnswer: params.sampleAnswer,
             keywords: params.keywords,
-            type: params.questionType as 'text' | 'code',
-            sortOrder: params.sortOrder,
+            type: params.questionType as import('@/types').QuestionType,
           },
         ] as unknown as import('@/types').QuestionPayload[]);
         await fetchQuestions(params.jobId);

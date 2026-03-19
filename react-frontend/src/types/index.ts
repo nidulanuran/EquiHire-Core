@@ -32,4 +32,10 @@ export type {
   Candidate,
   CandidateAnswerPayload,
   ValidateInvitationResponse,
+  ParsedCv,
+  UploadCvResponse,
+  CheatEventItem,
+  AnswerSubmission,
+  SubmitAssessmentPayload,
+  StartSessionResponse,
 } from './api';
