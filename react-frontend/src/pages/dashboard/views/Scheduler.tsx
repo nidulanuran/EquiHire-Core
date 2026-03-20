@@ -19,11 +19,18 @@ export default function InterviewScheduler() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Schedule Interview</h2>
-        <p className="text-gray-500">
-          Send magic link invitations to candidates for blind interview sessions.
-        </p>
+      <div className="flex flex-col md:flex-row justify-between gap-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-primary/10 p-2 rounded-xl">
+               <Clock className="w-6 h-6 text-primary animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-800 to-gray-500">Schedule Interview</h2>
+              <p className="text-gray-500 text-sm font-medium">Send magic link invitations to candidates for blind interview sessions.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -32,10 +39,10 @@ export default function InterviewScheduler() {
         </div>
 
         <div className="space-y-6">
-          <Card className="shadow-md border-gray-100 h-full border-t-4 border-t-[#FF7300]">
+          <Card className="shadow-md border-gray-100 h-full border-t-4 border-t-primary">
             <CardHeader className="pb-3 border-b border-gray-50 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#FF7300]" aria-hidden />
+                <Clock className="w-4 h-4 text-primary" aria-hidden />
                 Recent Invitations
               </CardTitle>
               <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
@@ -74,7 +81,7 @@ export default function InterviewScheduler() {
                     return (
                     <div
                       key={record.id || email}
-                      className="group flex flex-col p-3 rounded-xl bg-white hover:bg-orange-50/50 transition-all border border-gray-100 hover:border-orange-200 shadow-sm hover:shadow-md"
+                      className="group flex flex-col p-3 rounded-xl bg-white hover:bg-primary/5 transition-all border border-gray-100 hover:border-primary/20 shadow-sm hover:shadow-md"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span

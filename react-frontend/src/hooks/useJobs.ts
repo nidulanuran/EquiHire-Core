@@ -26,7 +26,7 @@ export interface UseJobsResult {
     recruiterId: string;
     evaluationTemplateId: string;
   }) => Promise<{ success: boolean; error?: string }>;
-  updateJob: (jobId: string, payload: { title: string; description: string; requiredSkills: string[] }) => Promise<void>;
+  updateJob: (jobId: string, payload: { title: string; description: string; requiredSkills: string[]; evaluationTemplateId?: string }) => Promise<void>;
   deleteJob: (jobId: string) => Promise<void>;
 }
 
@@ -108,7 +108,7 @@ export function useJobs({ userId }: UseJobsOptions): UseJobsResult {
   );
 
   const updateJob = useCallback(
-    async (jobId: string, payload: { title: string; description: string; requiredSkills: string[] }) => {
+    async (jobId: string, payload: { title: string; description: string; requiredSkills: string[]; evaluationTemplateId?: string }) => {
       await API.updateJob(jobId, payload);
       await refreshJobs();
     },

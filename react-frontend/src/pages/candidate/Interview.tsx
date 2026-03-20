@@ -31,6 +31,7 @@ export default function CandidateInterview() {
     // UI Warning State
     const [showWarning, setShowWarning] = useState(false);
     const [warningMessage, setWarningMessage] = useState("");
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [warningIcon, setWarningIcon] = useState<"tabswitch" | "fullscreen">("tabswitch");
     
     // Stable ref for submit

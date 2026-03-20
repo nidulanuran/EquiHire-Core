@@ -13,6 +13,9 @@ import CandidateWelcome from '@/pages/candidate/Welcome';
 import CandidateInterview from '@/pages/candidate/Interview';
 import InviteHandler from '@/pages/candidate/InviteHandler';
 import OrganizationSetup from '@/pages/onboarding/OrganizationSetup';
+import UserGuide from '@/components/documentation/UserGuide';
+import ApiDocs from '@/components/documentation/ApiDocs';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 
 function App() {
   const { state } = useAuthContext();
@@ -26,25 +29,12 @@ function App() {
   if (path.startsWith('/invite/')) return <InviteHandler />;
   if (path === '/candidate/welcome') return <CandidateWelcome />;
   if (path === '/candidate/interview') return <CandidateInterview />;
+  if (path === '/documentation/guide') return <UserGuide />;
+  if (path === '/documentation/api') return <ApiDocs />;
 
   if (isAuthenticated) {
     if (checkingOrg) {
-      return (
-        <div className="min-h-screen bg-white flex flex-col items-center justify-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-orange-50 opacity-30" aria-hidden />
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#FF7300] to-[#E56700] rounded-2xl shadow-lg flex items-center justify-center animate-pulse">
-              <span className="text-white font-bold text-4xl tracking-tighter">Eh</span>
-            </div>
-            <h1 className="mt-8 text-2xl font-bold text-gray-900 tracking-tight">
-              Equi<span className="text-[#FF7300]">Hire</span>
-            </h1>
-            <p className="mt-2 text-gray-500 text-sm animate-pulse">Loading your workspace...</p>
-          </div>
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" aria-hidden />
-          <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-yellow-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" aria-hidden />
-        </div>
-      );
+      return <LoadingScreen message="Loading Workspace..." />;
     }
 
     if (!hasOrg) {

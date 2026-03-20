@@ -1,21 +1,113 @@
 export const EquiHireLogo = ({ className }: { className?: string }) => (
-    <svg
-        viewBox="0 0 209 186"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className={className}
-    >
-        {/* Left black half of the shield */}
-        <path d="M4 30 C4 13 17 0 34 0H104V185L83 170H34C17 170 4 157 4 140V30Z" fill="#000000" />
-        {/* Right orange half of the shield */}
-        <path d="M205 30C205 13 192 0 175 0H105V185L126 170H175C192 170 205 157 205 140V30Z" fill="#FF7300" />
-        {/* White head silhouette on left */}
-        <path d="M30 50 C25 65 25 95 30 110 C35 125 50 135 70 135 C90 135 105 125 110 110 C115 95 115 65 110 50 C105 35 90 25 70 25 C50 25 35 35 30 50 Z M70 40 C85 40 95 50 95 65 C95 80 85 90 70 90 C55 90 45 80 45 65 C45 50 55 40 70 40 Z" fill="#FFFFFF" />
-        {/* Orange bar across the eyes */}
-        <path d="M30 80 H180 V95 H30 Z" fill="#FF7300" />
-        {/* Shadow on bottom left */}
-        <path d="M30 135 C35 140 50 145 70 145 C90 145 105 140 110 135 C90 145 70 145 50 135 Z" fill="#000000" opacity="0.5" />
-    </svg>
+  <svg
+    viewBox="0 0 220 220"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    {/* Main black circular body */}
+    <circle cx="110" cy="110" r="78" fill="#111111" />
+
+    {/* Outer orange top orbit */}
+    <path
+      d="M50 85 A90 90 0 0 1 165 45"
+      stroke="#FF7300"
+      strokeWidth="10"
+      strokeLinecap="round"
+    />
+
+    {/* Outer white right orbit */}
+    <path
+      d="M175 60 A88 88 0 0 1 175 150"
+      stroke="white"
+      strokeWidth="10"
+      strokeLinecap="round"
+    />
+
+    {/* Lower orbit accent */}
+    <path
+      d="M55 155 A88 88 0 0 0 160 175"
+      stroke="#222222"
+      strokeWidth="6"
+      strokeLinecap="round"
+    />
+
+    {/* Left black node */}
+    <circle cx="42" cy="105" r="9" fill="#111111" />
+
+    {/* Top right orange node */}
+    <circle cx="170" cy="52" r="9" fill="#FF7300" />
+
+    {/* Bottom orange node */}
+    <circle cx="110" cy="182" r="8" fill="#FF7300" />
+
+    {/* Armadillo shell segments */}
+    <path
+      d="M92 78 C96 65 124 65 130 78 V108 H92Z"
+      fill="#FF7300"
+    />
+    <path
+      d="M102 76 C106 64 118 64 122 76 V108 H102Z"
+      fill="#111111"
+      opacity="0.12"
+    />
+
+    {/* Armadillo body */}
+    <path
+      d="
+        M78 118
+        C82 92 95 78 122 78
+        C145 78 156 92 156 112
+        C156 128 146 138 128 140
+        C116 142 102 138 92 132
+        C84 128 79 124 78 118
+      "
+      fill="#111111"
+    />
+
+    {/* Head */}
+    <path
+      d="
+        M140 102
+        C152 104 160 114 160 126
+        C160 135 154 141 145 141
+        C138 141 132 136 132 128
+        C132 118 134 108 140 102
+      "
+      fill="#111111"
+    />
+
+    {/* Ear */}
+    <path
+      d="M145 92 L151 82 L156 95 Z"
+      fill="#111111"
+    />
+
+    {/* Eye */}
+    <circle cx="147" cy="120" r="2.5" fill="white" />
+
+    {/* White body line */}
+    <path
+      d="
+        M85 118
+        C102 110 122 110 140 120
+      "
+      stroke="white"
+      strokeWidth="4"
+      strokeLinecap="round"
+    />
+
+    {/* Tail curl */}
+    <path
+      d="
+        M88 140
+        C80 150 80 160 95 165
+      "
+      stroke="#111111"
+      strokeWidth="5"
+      strokeLinecap="round"
+    />
+  </svg>
 );
 
 export const DashboardIcon = ({ className }: { className?: string }) => (
@@ -195,4 +287,76 @@ export const LandingPageIllustration = ({ width = 209, height = 186 }: { width?:
             </linearGradient>
         </defs>
     </svg>
+);
+
+export const AutomatedScreeningIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <rect x="25" y="15" width="50" height="70" rx="4" stroke="currentColor" strokeWidth="4" className="text-muted-foreground/20" />
+    <path d="M35 30H65M35 45H65M35 60H50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" className="text-muted-foreground/30" />
+    <line x1="15" y1="20" x2="85" y2="20" stroke="#FF7300" strokeWidth="3" filter="drop-shadow(0 0 4px #FF7300)">
+      <animate attributeName="y1" values="20;80;20" dur="2.5s" repeatCount="indefinite" />
+      <animate attributeName="y2" values="20;80;20" dur="2.5s" repeatCount="indefinite" />
+    </line>
+    <circle cx="25" cy="15" r="3" fill="#FF7300" />
+    <circle cx="75" cy="15" r="3" fill="#FF7300" />
+    <circle cx="25" cy="85" r="3" fill="#FF7300" />
+    <circle cx="75" cy="85" r="3" fill="#FF7300" />
+  </svg>
+);
+
+export const BiasEliminationIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    {/* Shield */}
+    <path d="M50 15L25 25V45C25 65 50 85 50 85C50 85 75 65 75 45V25L50 15Z" fill="currentColor" opacity="0.1" className="text-muted-foreground" />
+    <path d="M50 15L25 25V45C25 65 50 85 50 85C50 85 75 65 75 45V25L50 15Z" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" className="text-muted-foreground/30" />
+    {/* Person */}
+    <circle cx="50" cy="40" r="8" fill="currentColor" className="text-muted-foreground/40" />
+    <path d="M35 65C35 55 42 52 50 52C58 52 65 55 65 65" stroke="currentColor" strokeWidth="4" strokeLinecap="round" className="text-muted-foreground/40" />
+    {/* Redaction box */}
+    <rect x="30" y="32" width="40" height="16" fill="currentColor" rx="2" className="text-foreground">
+        <animate attributeName="opacity" values="0;1;1;0;0" dur="3s" repeatCount="indefinite" />
+    </rect>
+    <rect x="32" y="58" width="36" height="8" fill="currentColor" rx="2" className="text-foreground">
+        <animate attributeName="opacity" values="0;1;1;0;0" dur="3s" repeatCount="indefinite" />
+    </rect>
+    {/* Safe check */}
+    <path d="M42 50L48 56L60 42" stroke="#FF7300" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0">
+        <animate attributeName="opacity" values="0;0;1;1;0" dur="3s" repeatCount="indefinite" />
+        <animate attributeName="stroke-dasharray" values="0,50; 50,50" dur="3s" repeatCount="indefinite" />
+    </path>
+  </svg>
+);
+
+export const RealTimeAnalyticsIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    {/* Axes */}
+    <path d="M20 80H80M20 80V20" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/30" />
+    {/* Bars */}
+    <rect x="30" y="50" width="10" height="30" fill="currentColor" rx="2" className="text-muted-foreground/20">
+      <animate attributeName="y" values="50;60;50" dur="2s" repeatCount="indefinite" />
+      <animate attributeName="height" values="30;20;30" dur="2s" repeatCount="indefinite" />
+    </rect>
+    <rect x="50" y="30" width="10" height="50" fill="currentColor" rx="2" className="text-muted-foreground/40">
+      <animate attributeName="y" values="30;45;30" dur="2.5s" repeatCount="indefinite" />
+      <animate attributeName="height" values="50;35;50" dur="2.5s" repeatCount="indefinite" />
+    </rect>
+    <rect x="70" y="15" width="10" height="65" fill="currentColor" rx="2" className="text-muted-foreground/60">
+      <animate attributeName="y" values="15;25;15" dur="3s" repeatCount="indefinite" />
+      <animate attributeName="height" values="65;55;65" dur="3s" repeatCount="indefinite" />
+    </rect>
+    {/* Line chart */}
+    <path d="M20 60L40 40L60 50L80 20" stroke="#FF7300" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="100" strokeDashoffset="100">
+      <animate attributeName="stroke-dashoffset" values="100;0;0" dur="3s" repeatCount="indefinite" />
+    </path>
+    {/* Nodes */}
+    <circle cx="40" cy="40" r="3" fill="#FF7300">
+        <animate attributeName="r" values="3;5;3" dur="1s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="60" cy="50" r="3" fill="#FF7300">
+        <animate attributeName="r" values="3;5;3" dur="1.2s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="80" cy="20" r="3" fill="#FF7300">
+        <animate attributeName="r" values="3;5;3" dur="1.5s" repeatCount="indefinite" />
+    </circle>
+  </svg>
 );

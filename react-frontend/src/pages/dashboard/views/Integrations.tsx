@@ -18,11 +18,11 @@ interface IntegrationCardProps {
 
 const IntegrationCard = ({ title, description, icon: Icon, status, category, metrics }: IntegrationCardProps) => (
     <Card className="shadow-sm border-gray-200 hover:shadow-md transition-all group overflow-hidden">
-        <div className={`h-1.5 w-full ${status === 'connected' ? 'bg-[#FF7300]' : 'bg-gray-200'}`} />
+        <div className={`h-1.5 w-full ${status === 'connected' ? 'bg-primary' : 'bg-gray-200'}`} />
         <CardHeader className="pb-3 pt-5">
             <div className="flex justify-between items-start">
                 <div className="flex items-center space-x-3">
-                    <div className={`p-2.5 rounded-xl ${status === 'connected' ? 'bg-orange-50 text-[#FF7300]' : 'bg-gray-100 text-gray-500'}`}>
+                    <div className={`p-2.5 rounded-xl ${status === 'connected' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>
                         <Icon className="h-6 w-6" />
                     </div>
                     <div>
@@ -59,7 +59,7 @@ const IntegrationCard = ({ title, description, icon: Icon, status, category, met
 
             <div className="flex items-center justify-between pt-2 border-t border-gray-50">
                 <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">{category}</span>
-                <Button variant="ghost" size="sm" className="h-7 text-xs hover:text-[#FF7300] hover:bg-orange-50">
+                <Button variant="ghost" size="sm" className="h-7 text-xs hover:text-primary hover:bg-primary/10">
                     <RefreshCw className="mr-2 h-3 w-3" /> {status === 'connected' ? 'Sync' : 'Connect'}
                 </Button>
             </div>
@@ -70,9 +70,14 @@ const IntegrationCard = ({ title, description, icon: Icon, status, category, met
 export default function Integrations() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900">System Integrations</h2>
-                <p className="text-gray-500">Manage connections to external services, AI models, and infrastructure.</p>
+            <div className="flex items-center gap-4">
+              <div className="bg-primary/10 p-2 rounded-xl">
+                 <Cloud className="w-6 h-6 text-primary animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-800 to-gray-500">System Integrations</h2>
+                <p className="text-gray-500 text-sm font-medium">Manage connections to external services, AI models, and infrastructure.</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -143,8 +148,8 @@ export default function Integrations() {
                 />
             </div>
 
-            <div className="rounded-lg bg-orange-50 border border-orange-100 p-4 mt-8 flex items-start gap-3">
-                <Lock className="w-5 h-5 text-[#FF7300] mt-0.5" />
+            <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 mt-8 flex items-start gap-3">
+                <Lock className="w-5 h-5 text-primary mt-0.5" />
                 <div>
                     <h4 className="text-sm font-bold text-gray-900">Security Note</h4>
                     <p className="text-xs text-gray-600 mt-1">

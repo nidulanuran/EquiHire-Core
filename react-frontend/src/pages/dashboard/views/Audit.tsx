@@ -25,12 +25,17 @@ export default function AuditAndStatistics() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Audit & Statistics</h2>
-          <p className="text-gray-500">
-            Monitor system interactions and evaluate overall candidate performance.
-          </p>
+      <div className="flex flex-col md:flex-row justify-between gap-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-primary/10 p-2 rounded-xl">
+               <Activity className="w-6 h-6 text-primary animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-800 to-gray-500">Audit & Statistics</h2>
+              <p className="text-gray-500 text-sm font-medium">Monitor system interactions and evaluate overall candidate performance.</p>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {lastSynced && !isLoading && (
@@ -41,7 +46,7 @@ export default function AuditAndStatistics() {
             size="sm"
             onClick={() => refresh()}
             disabled={isSyncing || isLoading}
-            className="gap-2 border-gray-200 hover:border-[#FF7300] hover:text-[#FF7300]"
+            className="gap-2 border-gray-200 hover:border-primary hover:text-primary"
           >
             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} aria-hidden />
             {isSyncing ? 'Syncing...' : 'Sync'}
@@ -51,7 +56,7 @@ export default function AuditAndStatistics() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Total Events', value: stats.total, icon: Activity, color: 'bg-orange-50', iconColor: 'text-[#FF7300]' },
+          { label: 'Total Events', value: stats.total, icon: Activity, color: 'bg-primary/10', iconColor: 'text-primary' },
           { label: "Today's Events", value: stats.today, icon: Clock, color: 'bg-blue-50', iconColor: 'text-blue-600' },
           { label: 'Unique Actors', value: stats.actors, icon: Users, color: 'bg-green-50', iconColor: 'text-green-600' },
         ].map((stat, idx) => (

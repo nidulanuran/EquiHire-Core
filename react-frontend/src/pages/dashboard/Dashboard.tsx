@@ -9,7 +9,7 @@ import { useOrganization } from '@/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { EquiHireLogo, DashboardIcon, SessionIcon, IntegrationIcon } from '@/components/ui/Icons';
-import { LogOut, Bell, Settings, Search, Check, Building2, ChevronDown, Activity, FileText } from 'lucide-react';
+import { LogOut, Bell, Settings, Check, Building2, ChevronDown, Activity, FileText } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,7 +94,7 @@ export default function Dashboard() {
             <Button
               key={tab}
               variant="ghost"
-              className={`w-full justify-start ${activeTab === tab ? 'text-[#FF7300] bg-orange-50 hover:bg-orange-50 hover:text-[#FF7300]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
+              className={`w-full justify-start ${activeTab === tab ? 'text-primary bg-primary/10 hover:bg-primary/10 hover:text-primary' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
               onClick={() => setActiveTab(tab)}
             >
               {icon}
@@ -116,14 +116,7 @@ export default function Dashboard() {
       </aside>
 
       <main className="flex-1 flex flex-col md:ml-64 transition-all duration-300">
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-10">
-          <div className="flex items-center text-gray-400 focus-within:text-gray-600">
-            <Search className="h-5 w-5 absolute ml-3 pointer-events-none" aria-hidden />
-            <Input
-              placeholder="Search sessions..."
-              className="pl-10 w-64 sm:w-96 border-gray-200 bg-gray-50 focus:bg-white transition-all rounded-full h-9"
-            />
-          </div>
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-end px-8 sticky top-0 z-10">
           <div className="flex items-center space-x-4">
             {organization && (
               <DropdownMenu>
@@ -141,7 +134,7 @@ export default function Dashboard() {
                   <DropdownMenuLabel className="text-xs font-normal text-gray-500">
                     Current Workspace
                   </DropdownMenuLabel>
-                  <DropdownMenuItem className="gap-2 p-2 focus:bg-orange-50 focus:text-orange-600 cursor-default">
+                  <DropdownMenuItem className="gap-2 p-2 focus:bg-primary/5 focus:text-primary cursor-default">
                     <div className="flex h-6 w-6 items-center justify-center rounded-md border bg-white">
                       <Building2 className="h-3.5 w-3.5" />
                     </div>
@@ -151,7 +144,7 @@ export default function Dashboard() {
                         {organization.industry?.replace('_', ' ')}
                       </span>
                     </div>
-                    <Check className="ml-auto h-4 w-4 text-orange-600" />
+                    <Check className="ml-auto h-4 w-4 text-primary" />
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
@@ -226,7 +219,7 @@ export default function Dashboard() {
               <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveClick} disabled={isSaving} className="bg-[#FF7300] hover:bg-[#E56700]">
+              <Button onClick={handleSaveClick} disabled={isSaving} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 {isSaving ? 'Saving...' : 'Save changes'}
               </Button>
             </DialogFooter>

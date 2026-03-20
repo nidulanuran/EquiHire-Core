@@ -11,7 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Code, FileText, AlertCircle, Terminal, Briefcase, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Code, FileText, Terminal, Briefcase, Loader2 } from 'lucide-react';
+import { AlertMessage } from '@/components/ui/alert-message';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Questions() {
   const { state } = useAuthContext();
@@ -91,23 +93,32 @@ export default function Questions() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900">Interview Questions</h2>
-                <p className="text-gray-500">Manage technical questions and quizzes for your job roles.</p>
+            <div className="flex flex-col md:flex-row justify-between gap-4">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="bg-primary/10 p-2 rounded-xl">
+                     <FileText className="w-6 h-6 text-primary animate-pulse" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-800 to-gray-500">Interview Questions</h2>
+                    <p className="text-gray-500 text-sm font-medium">Manage technical questions and quizzes for your job roles.</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Content (Left 2/3) */}
                 <div className="col-span-1 lg:col-span-2 space-y-6">
 
-                    <Card className="border-t-4 border-t-[#FF7300] shadow-sm">
+                    <Card className="border-t-4 border-t-primary shadow-sm">
                         <CardHeader>
                             <CardTitle>Select Job Role</CardTitle>
                             <CardDescription>Choose a job to manage its questions.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-                                <SelectTrigger className="w-full md:w-[400px] border-gray-200 focus:ring-[#FF7300]">
+                                <SelectTrigger className="w-full md:w-[400px] border-gray-200 focus:ring-primary">
                                     <SelectValue placeholder="Select a job role..." />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -122,18 +133,28 @@ export default function Questions() {
                     {selectedJobId && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             {/* List of Questions */}
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                                        Existing Questions
-                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-orange-50 text-[#FF7300] ml-2">
-                                            {questions.length}/10
+                            <div className="space-y-6">
+                                <Card className="shadow-md border-gray-100 h-full border-t-4 border-t-primary">
+                                    <CardHeader className="pb-3 border-b border-gray-50 flex flex-row items-center justify-between">
+                                        <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            <FileText className="w-4 h-4 text-primary" aria-hidden />
+                                            Existing Questions
+                                        </CardTitle>
+                                        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
+                                            {loading ? <Skeleton className="h-3 w-8" /> : `${questions.length} total`}
                                         </span>
-                                    </h3>
-                                </div>
-
-                                {loading ? (
-                                    <p className="text-sm text-gray-500">Loading questions...</p>
+                                    </CardHeader>
+                                    <CardContent className="pt-4 max-h-[600px] overflow-auto pr-2 custom-scrollbar">
+                                        {loading ? (
+                                    <div className="space-y-3">
+                                        {[1, 2, 3].map((i) => (
+                                            <div key={i} className="p-4 border rounded-lg bg-white flex flex-col gap-3">
+                                                <Skeleton className="h-4 w-1/4 bg-gray-200" />
+                                                <Skeleton className="h-3 w-3/4 bg-gray-200" />
+                                                <Skeleton className="h-3 w-1/2 bg-gray-200" />
+                                            </div>
+                                        ))}
+                                    </div>
                                 ) : questions.length === 0 ? (
                                     <div className="text-center p-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
                                         <p className="text-gray-500 text-sm">No questions added yet.</p>
@@ -141,7 +162,7 @@ export default function Questions() {
                                 ) : (
                                     <div className="space-y-3">
                                         {questions.map((q, index) => (
-                                            <Card key={q.id || index} className="overflow-hidden border-l-4 border-l-gray-300 hover:border-l-[#FF7300] transition-all group">
+                                            <Card key={q.id || index} className="overflow-hidden border-l-4 border-l-gray-300 hover:border-l-primary transition-all group">
                                                 <CardContent className="p-4">
                                                     <div className="flex justify-between items-start gap-4">
                                                         <div className="flex-1 space-y-2">
@@ -172,7 +193,7 @@ export default function Questions() {
                                                             {q.keywords && q.keywords.length > 0 && (
                                                                 <div className="flex flex-wrap gap-1 mt-2">
                                                                     {q.keywords.map((k: string, i: number) => (
-                                                                        <span key={i} className="text-[10px] bg-orange-50 text-orange-700 border border-orange-100 px-1.5 py-0.5 rounded">
+                                                                        <span key={i} className="text-[10px] bg-primary/10 text-primary border border-primary/10 px-1.5 py-0.5 rounded">
                                                                             {k}
                                                                         </span>
                                                                     ))}
@@ -193,20 +214,20 @@ export default function Questions() {
                                         ))}
                                     </div>
                                 )}
+                                    </CardContent>
+                                </Card>
                             </div>
 
                             {/* Add New Question Form */}
-                            <Card className="h-fit sticky top-6 shadow-md border-gray-200">
-                                <CardHeader className="bg-gray-50 border-b pb-4">
-                                    <CardTitle className="text-base text-gray-800">Add New Question</CardTitle>
+                            <Card className="h-fit sticky top-6 shadow-md border-gray-100 border-t-4 border-t-primary">
+                                <CardHeader className="pb-3 border-b border-gray-50 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                        <Plus className="w-4 h-4 text-primary" aria-hidden />
+                                        Add New Question
+                                    </CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-6 space-y-4">
-                                    {error && (
-                                        <div className="bg-red-50 text-red-600 text-sm p-3 rounded flex items-center gap-2">
-                                            <AlertCircle className="w-4 h-4" />
-                                            {error}
-                                        </div>
-                                    )}
+                                <CardContent className="pt-5 space-y-4">
+                                    <AlertMessage type="error" message={error} className="mb-4" />
 
                                     <div className="space-y-2">
                                         <Label>Question Type</Label>
@@ -216,7 +237,7 @@ export default function Questions() {
                                                 variant={questionType === 'paragraph' ? 'default' : 'outline'}
                                                 size="sm"
                                                 onClick={() => setQuestionType('paragraph')}
-                                                className={questionType === 'paragraph' ? 'bg-[#FF7300] hover:bg-[#E56700] text-white border-transparent' : 'hover:text-[#FF7300] hover:border-[#FF7300]'}
+                                                className={questionType === 'paragraph' ? 'bg-primary hover:bg-primary/90 text-primary-foreground border-transparent' : 'hover:text-primary hover:border-primary'}
                                             >
                                                 <FileText className="w-4 h-4 mr-2" /> Paragraph
                                             </Button>
@@ -237,7 +258,7 @@ export default function Questions() {
                                             {questionType === 'code' ? 'Problem Description' : 'Question'}
                                         </Label>
                                         {questionType === 'code' ? (
-                                            <div className="relative rounded-md overflow-hidden border border-gray-300 focus-within:ring-2 focus-within:ring-[#FF7300] focus-within:border-transparent transition-all">
+                                            <div className="relative rounded-md overflow-hidden border border-gray-300 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all">
                                                 <div className="bg-gray-100 text-xs text-gray-500 px-3 py-1.5 border-b border-gray-200 flex items-center">
                                                     <FileText className="w-3 h-3 mr-1" /> Description (Markdown supported)
                                                 </div>
@@ -255,7 +276,7 @@ export default function Questions() {
                                                 placeholder="e.g. Explain the difference between..."
                                                 value={questionText}
                                                 onChange={(e) => setQuestionText(e.target.value)}
-                                                className="min-h-[80px] focus-visible:ring-[#FF7300]"
+                                                className="min-h-[80px] focus-visible:ring-primary"
                                             />
                                         )}
                                     </div>
@@ -286,7 +307,7 @@ export default function Questions() {
                                                 placeholder="Provide a model answer or key points..."
                                                 value={sampleAnswer}
                                                 onChange={(e) => setSampleAnswer(e.target.value)}
-                                                className="min-h-[100px] font-mono text-sm focus-visible:ring-[#FF7300]"
+                                                className="min-h-[100px] font-mono text-sm focus-visible:ring-primary"
                                             />
                                         )}
                                     </div>
@@ -298,7 +319,7 @@ export default function Questions() {
                                             placeholder="e.g. Recursion, DP, Time Complexity"
                                             value={keywordsInput}
                                             onChange={(e) => setKeywordsInput(e.target.value)}
-                                            className="focus-visible:ring-[#FF7300]"
+                                            className="focus-visible:ring-primary"
                                         />
                                         <p className="text-xs text-gray-500">Used for automated keyword matching.</p>
                                     </div>
@@ -306,7 +327,7 @@ export default function Questions() {
                                     <Button
                                         onClick={handleAddQuestion}
                                         disabled={isSubmitting || questions.length >= 10}
-                                        className="w-full bg-[#FF7300] hover:bg-[#E56700] text-white shadow-md transition-all active:scale-[0.99]"
+                                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-all active:scale-[0.99]"
                                     >
                                         {isSubmitting ? 'Saving...' : 'Add Question'} <Plus className="w-4 h-4 ml-2" />
                                     </Button>
@@ -336,14 +357,14 @@ export default function Questions() {
                                                 key={job.id || 'default'}
                                                 onClick={() => { if (job.id) setSelectedJobId(job.id); }}
                                                 className={`p-3 border rounded-lg flex items-center justify-between cursor-pointer transition-all ${isSelected
-                                                        ? 'bg-orange-50 border-[#FF7300]/30'
+                                                        ? 'bg-primary/10 border-primary/30'
                                                         : 'bg-gray-50 hover:border-gray-300'
                                                     }`}
                                             >
                                                 <div className="flex items-center min-w-0">
-                                                    <Briefcase className={`h-4 w-4 mr-3 flex-shrink-0 ${isSelected ? 'text-[#FF7300]' : 'text-gray-400'}`} />
+                                                    <Briefcase className={`h-4 w-4 mr-3 flex-shrink-0 ${isSelected ? 'text-primary' : 'text-gray-400'}`} />
                                                     <div className="min-w-0">
-                                                        <p className={`font-medium text-sm truncate ${isSelected ? 'text-[#FF7300]' : 'text-gray-900'}`}>{job.title}</p>
+                                                        <p className={`font-medium text-sm truncate ${isSelected ? 'text-primary' : 'text-gray-900'}`}>{job.title}</p>
                                                         <p className="text-xs text-gray-500">
                                                             {count === undefined ? (
                                                                 <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Loading...</span>
@@ -354,7 +375,7 @@ export default function Questions() {
                                                     </div>
                                                 </div>
                                                 {count !== undefined && count > 0 && (
-                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-[#FF7300] text-white' : 'bg-gray-200 text-gray-600'
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-gray-200 text-gray-600'
                                                         }`}>
                                                         {count}/10
                                                     </span>

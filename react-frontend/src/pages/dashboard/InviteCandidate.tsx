@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Mail, Send, CheckCircle, Copy, AlertCircle } from 'lucide-react';
+import { Mail, Send, CheckCircle, Copy } from 'lucide-react';
+import { AlertMessage } from '@/components/ui/alert-message';
 import type { Job } from '@/types';
 
 export interface InviteCandidateProps {
@@ -73,7 +74,7 @@ export default function InviteCandidate({ organizationId }: InviteCandidateProps
     <Card className="shadow-lg">
       <CardHeader>
         <div className="flex items-center">
-          <Mail className="h-6 w-6 mr-2 text-[#FF7300]" aria-hidden />
+          <Mail className="h-6 w-6 mr-2 text-primary" aria-hidden />
           <CardTitle>Invite Candidate</CardTitle>
         </div>
         <CardDescription>Enter candidate details to schedule an interview.</CardDescription>
@@ -99,18 +100,13 @@ export default function InviteCandidate({ organizationId }: InviteCandidateProps
                 </div>
               </div>
             </div>
-            <Button onClick={clearMagicLink} className="w-full bg-gray-900 hover:bg-gray-800">
+            <Button onClick={clearMagicLink} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
               Send Another Invitation
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
-            {(error || validationError) && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start" role="alert">
-                <AlertCircle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" aria-hidden />
-                <p className="text-sm text-red-700">{error || validationError}</p>
-              </div>
-            )}
+            <AlertMessage type="error" message={error || validationError} />
 
             <div className="space-y-2">
               <Label htmlFor="candidateName">Candidate Name *</Label>

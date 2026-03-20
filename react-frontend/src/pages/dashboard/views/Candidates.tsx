@@ -44,7 +44,7 @@ export default function CandidateManager() {
     handleEvaluateCV,
   } = useCandidates({ userId });
 
-  const [viewMode, setViewMode] = useState<'table' | 'pipeline'>('pipeline');
+  const [viewMode, setViewMode] = useState<'table' | 'pipeline'>('table');
 
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-6 animate-in fade-in duration-500">
@@ -59,7 +59,7 @@ export default function CandidateManager() {
                  <Sparkles className="w-6 h-6 text-primary animate-pulse" />
               </div>
               <div>
-                <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent premium-gradient">Candidates</h2>
+                <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-800 to-gray-500">Candidates</h2>
                 <p className="text-gray-500 text-sm font-medium">Manage your intelligent hiring pipeline.</p>
               </div>
             </div>

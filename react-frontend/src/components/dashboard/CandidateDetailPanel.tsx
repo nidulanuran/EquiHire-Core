@@ -48,7 +48,7 @@ export function CandidateDetailPanel({
         </button>
       </div>
 
-      <Card className="flex-1 shadow-lg border-gray-200 overflow-auto">
+      <Card className="flex-1 shadow-lg border-gray-100 border-t-4 border-t-primary overflow-auto">
         <CardHeader className="bg-gray-50 border-b border-gray-100 pb-6">
           <div className="flex flex-col items-center">
             <div

@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Plus, Trash2, Edit2, ShieldCheck, Loader2 } from 'lucide-react';
+import { FileText, Plus, Trash2, Edit2, ShieldCheck } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog, ConfirmUpdateDialog } from '@/components/ui/alert-dialog';
 import type { ExtendedEvaluationTemplate } from '@/types';
@@ -106,23 +107,39 @@ export default function MarkingCriteria() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Marking Criteria</h2>
-          <p className="text-gray-500">
-            Manage evaluation templates and AI prompts for candidate scoring.
-          </p>
+      <div className="flex flex-col md:flex-row justify-between gap-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-primary/10 p-2 rounded-xl">
+               <FileText className="w-6 h-6 text-primary animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-800 to-gray-500">Marking Criteria</h2>
+              <p className="text-gray-500 text-sm font-medium">Manage evaluation templates and AI prompts for candidate scoring.</p>
+            </div>
+          </div>
         </div>
-        <Button className="bg-[#FF7300] hover:bg-[#E56700]" onClick={() => handleOpenDialog()}>
-          <Plus className="mr-2 h-4 w-4" aria-hidden />
-          New Template
-        </Button>
+        <div className="flex items-center self-start">
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" onClick={() => handleOpenDialog()}>
+            <Plus className="mr-2 h-4 w-4" aria-hidden />
+            New Template
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-          <Loader2 className="w-6 h-6 animate-spin mb-2 text-[#FF7300]" aria-hidden />
-          Loading templates...
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="shadow-sm border-gray-200 h-[200px] flex flex-col p-4 animate-in fade-in">
+              <Skeleton className="h-6 w-1/3 mb-4 bg-gray-200" />
+              <Skeleton className="h-4 w-full mb-2 bg-gray-200" />
+              <Skeleton className="h-4 w-3/4 mb-6 bg-gray-200" />
+              <div className="flex gap-2 mt-auto justify-end">
+                <Skeleton className="h-8 w-8 bg-gray-200" />
+                <Skeleton className="h-8 w-8 bg-gray-200" />
+              </div>
+            </Card>
+          ))}
         </div>
       ) : templates.length === 0 ? (
         <div className="text-center p-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
@@ -155,7 +172,7 @@ export default function MarkingCriteria() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-gray-500 hover:text-[#FF7300]"
+                        className="h-8 w-8 text-gray-500 hover:text-primary"
                         onClick={() => template.id && handleOpenDialog(template)}
                       >
                         <Edit2 className="h-4 w-4" aria-hidden />
@@ -223,7 +240,7 @@ export default function MarkingCriteria() {
             <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button className="bg-[#FF7300] hover:bg-[#E56700]" onClick={handleSave} disabled={isSaving}>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleSave} disabled={isSaving}>
               {isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Template'}
             </Button>
           </DialogFooter>

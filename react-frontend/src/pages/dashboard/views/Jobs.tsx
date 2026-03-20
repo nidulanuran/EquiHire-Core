@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, Edit2, Trash2, Loader2, Plus, X, Check, FileText } from 'lucide-react';
+import { Briefcase, Edit2, Trash2, Plus, X, Check, FileText, Loader2 } from 'lucide-react';
+import { AlertMessage } from '@/components/ui/alert-message';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog, ConfirmUpdateDialog } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
@@ -44,7 +46,7 @@ export default function JobsManager() {
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
-  const [editForm, setEditForm] = useState({ title: '', description: '', requiredSkills: [] as string[] });
+  const [editForm, setEditForm] = useState({ title: '', description: '', requiredSkills: [] as string[], evaluationTemplateId: '' });
   const [editActiveCategory, setEditActiveCategory] = useState('Languages');
   const [editCustomSkill, setEditCustomSkill] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -110,6 +112,7 @@ export default function JobsManager() {
       title: job.title ?? '',
       description: job.description ?? '',
       requiredSkills: job.requiredSkills ?? [],
+      evaluationTemplateId: job.evaluationTemplateId ?? '',
     });
     setEditDialogOpen(true);
   };
@@ -140,6 +143,7 @@ export default function JobsManager() {
         title: editForm.title,
         description: editForm.description,
         requiredSkills: editForm.requiredSkills,
+        evaluationTemplateId: editForm.evaluationTemplateId,
       });
     } catch (err) {
       console.error('Failed to update job', err);
@@ -166,25 +170,36 @@ export default function JobsManager() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900">Job Management</h2>
-                <p className="text-gray-500">Create and manage job roles/openings.</p>
+            <div className="flex flex-col md:flex-row justify-between gap-4">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="bg-primary/10 p-2 rounded-xl">
+                     <Briefcase className="w-6 h-6 text-primary animate-pulse" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-800 to-gray-500">Job Management</h2>
+                    <p className="text-gray-500 text-sm font-medium">Create and manage job roles/openings.</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* ═══ Create Job Form ═══ */}
                 <div className="col-span-1 lg:col-span-2">
-                    <Card className="shadow-lg mb-8 border-t-4 border-t-[#FF7300]">
+                    <Card className="shadow-lg mb-8 border-t-4 border-t-primary">
                         <CardHeader>
                             <div className="flex items-center">
-                                <Briefcase className="h-6 w-6 mr-2 text-[#FF7300]" />
+                                <Briefcase className="h-6 w-6 mr-2 text-primary" />
                                 <CardTitle>Create New Job Role</CardTitle>
                             </div>
                             <CardDescription>Define the role, required skills, and evaluation criteria to start filtering candidates.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</p>}
-                            {success && <p className="text-green-600 text-sm bg-green-50 p-2 rounded">{success}</p>}
+                            <div className="space-y-2">
+                                <AlertMessage type="error" message={error} />
+                                <AlertMessage type="success" message={success} />
+                            </div>
 
                             {/* Title & Description */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -221,9 +236,9 @@ export default function JobsManager() {
                                 {skills.length > 0 && (
                                     <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100 min-h-[50px]">
                                         {skills.map(skill => (
-                                            <span key={skill} className="bg-[#FF7300]/10 text-[#FF7300] border border-[#FF7300]/20 text-xs px-2 py-1 rounded-full flex items-center shadow-sm animate-in fade-in zoom-in duration-200">
+                                            <span key={skill} className="bg-primary/10 text-primary border border-primary/20 text-xs px-2 py-1 rounded-full flex items-center shadow-sm animate-in fade-in zoom-in duration-200">
                                                 {skill}
-                                                <button onClick={() => toggleSkill(skill)} className="ml-1 text-[#FF7300] hover:text-[#d36000]">
+                                                <button onClick={() => toggleSkill(skill)} className="ml-1 text-primary hover:text-primary/70">
                                                     <X className="w-3 h-3" />
                                                 </button>
                                             </span>
@@ -240,7 +255,7 @@ export default function JobsManager() {
                                                 className={cn(
                                                     "px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 hover:bg-gray-100",
                                                     activeCategory === category
-                                                        ? "border-[#FF7300] text-[#FF7300] bg-white"
+                                                        ? "border-primary text-primary bg-white"
                                                         : "border-transparent text-gray-600"
                                                 )}
                                             >
@@ -260,8 +275,8 @@ export default function JobsManager() {
                                                         className={cn(
                                                             "text-xs px-3 py-1.5 rounded-full border transition-all duration-200 flex items-center",
                                                             isSelected
-                                                                ? "bg-[#FF7300] text-white border-[#FF7300] shadow-md transform scale-105"
-                                                                : "bg-white text-gray-700 border-gray-200 hover:border-[#FF7300] hover:text-[#FF7300] hover:shadow-sm"
+                                                                ? "bg-primary text-primary-foreground border-primary shadow-md transform scale-105"
+                                                                : "bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary hover:shadow-sm"
                                                         )}
                                                     >
                                                         {isSelected && <Check className="w-3 h-3 mr-1" />}
@@ -289,7 +304,7 @@ export default function JobsManager() {
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
                                     <Label className="flex items-center gap-2">
-                                        <FileText className="w-4 h-4 text-[#FF7300]" />
+                                        <FileText className="w-4 h-4 text-primary" />
                                         Evaluation Criteria
                                     </Label>
                                     {isLoadingTemplates && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
@@ -335,7 +350,7 @@ export default function JobsManager() {
                             <Button
                                 onClick={handleCreateJob}
                                 disabled={isCreating}
-                                className="w-full bg-gray-900 hover:bg-gray-800 h-11 text-base shadow-md transition-all active:scale-[0.99]"
+                                className="w-full bg-primary hover:bg-primary/90 h-11 text-base shadow-md transition-all active:scale-[0.99] text-primary-foreground"
                             >
                                 {isCreating ? 'Creating Job...' : 'Create Job Role'} <Plus className="ml-2 h-4 w-4" />
                             </Button>
@@ -345,16 +360,31 @@ export default function JobsManager() {
 
                 {/* ═══ Active Roles Sidebar ═══ */}
                 <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-sm font-medium text-gray-500">Active Roles</CardTitle>
+                    <Card className="shadow-md border-gray-100 h-full border-t-4 border-t-primary">
+                        <CardHeader className="pb-3 border-b border-gray-50 flex flex-row items-center justify-between">
+                            <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <Briefcase className="w-4 h-4 text-primary" aria-hidden />
+                                Active Roles
+                            </CardTitle>
+                            <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
+                                {isLoading ? <Skeleton className="h-3 w-8" /> : `${jobs.length} total`}
+                            </span>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 {isLoading ? (
-                                    <div className="flex items-center justify-center py-6 text-gray-400">
-                                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                        <span className="text-sm">Loading...</span>
+                                    <div className="space-y-3">
+                                        {[1, 2, 3].map((i) => (
+                                            <div key={i} className="p-3 border rounded-lg bg-gray-50 flex items-center justify-between">
+                                                <div className="flex items-center gap-3 w-full">
+                                                    <Skeleton className="h-8 w-8 rounded-md bg-gray-200" />
+                                                    <div className="space-y-2 flex-1">
+                                                        <Skeleton className="h-4 w-3/4 bg-gray-200" />
+                                                        <Skeleton className="h-3 w-1/4 bg-gray-200" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 ) : jobs.length === 0 ? (
                                     <p className="text-sm text-gray-400">No jobs created yet.</p>
@@ -371,7 +401,7 @@ export default function JobsManager() {
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
                                                 <button
                                                     onClick={() => openEditDialog(job)}
-                                                    className="p-1 rounded bg-white border border-gray-200 shadow-sm hover:bg-orange-50 hover:border-[#FF7300] hover:text-[#FF7300] text-gray-400 transition-all"
+                                                    className="p-1 rounded bg-white border border-gray-200 shadow-sm hover:bg-primary/5 hover:border-primary hover:text-primary text-gray-400 transition-all"
                                                 >
                                                     <Edit2 className="w-3 h-3" />
                                                 </button>
@@ -396,7 +426,7 @@ export default function JobsManager() {
                 <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Edit2 className="w-5 h-5 text-[#FF7300]" />
+                            <Edit2 className="w-5 h-5 text-primary" />
                             Edit Job Role
                         </DialogTitle>
                     </DialogHeader>
@@ -428,9 +458,9 @@ export default function JobsManager() {
                             {editForm.requiredSkills.length > 0 && (
                                 <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100 min-h-[40px]">
                                     {editForm.requiredSkills.map(skill => (
-                                        <span key={skill} className="bg-[#FF7300]/10 text-[#FF7300] border border-[#FF7300]/20 text-xs px-2 py-1 rounded-full flex items-center">
+                                        <span key={skill} className="bg-primary/10 text-primary border border-primary/20 text-xs px-2 py-1 rounded-full flex items-center shadow-sm animate-in fade-in zoom-in duration-200">
                                             {skill}
-                                            <button onClick={() => toggleEditSkill(skill)} className="ml-1 hover:text-[#d36000]">
+                                            <button onClick={() => toggleEditSkill(skill)} className="ml-1 text-primary hover:text-primary/70">
                                                 <X className="w-3 h-3" />
                                             </button>
                                         </span>
@@ -447,7 +477,7 @@ export default function JobsManager() {
                                             className={cn(
                                                 "px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors border-b-2",
                                                 editActiveCategory === category
-                                                    ? "border-[#FF7300] text-[#FF7300] bg-white"
+                                                    ? "border-primary text-primary bg-white"
                                                     : "border-transparent text-gray-600 hover:text-gray-900"
                                             )}
                                         >
@@ -466,8 +496,8 @@ export default function JobsManager() {
                                                     className={cn(
                                                         "text-xs px-2.5 py-1 rounded-full border transition-all duration-200 flex items-center",
                                                         isSelected
-                                                            ? "bg-[#FF7300] text-white border-[#FF7300]"
-                                                            : "bg-white text-gray-700 border-gray-200 hover:border-[#FF7300] hover:text-[#FF7300]"
+                                                            ? "bg-primary text-primary-foreground border-primary"
+                                                            : "bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary"
                                                     )}
                                                 >
                                                     {isSelected && <Check className="w-3 h-3 mr-1" />}
@@ -488,12 +518,42 @@ export default function JobsManager() {
                                     />
                                 </div>
                             </div>
+                            
+                            <div className="space-y-2 mt-4 pt-4 border-t border-gray-100">
+                                <Label>Evaluation Criteria</Label>
+                                <Select value={editForm.evaluationTemplateId} onValueChange={(val) => setEditForm(prev => ({ ...prev, evaluationTemplateId: val }))}>
+                                    <SelectTrigger className="bg-white">
+                                        <SelectValue placeholder="Select an evaluation template..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {evaluationTemplates.length === 0 ? (
+                                            <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                                                No templates available.
+                                            </div>
+                                        ) : (
+                                            evaluationTemplates.map((template) => (
+                                                <SelectItem key={template.id || 'default'} value={template.id || ''}>
+                                                    <div className="flex items-center gap-2">
+                                                        {template.is_system_template && (
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
+                                                                System
+                                                            </span>
+                                                        )}
+                                                        {template.name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
                         </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
                         <Button
-                            className="bg-[#FF7300] hover:bg-[#E56700]"
+                            className="bg-primary text-primary-foreground hover:bg-primary/90"
                             onClick={() => { setEditDialogOpen(false); setConfirmUpdateOpen(true); }}
                             disabled={isSaving}
                         >

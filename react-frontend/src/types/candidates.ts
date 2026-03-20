@@ -27,8 +27,11 @@ export interface ExtendedCandidate {
   skillsScore?: number;
   interviewScore?: number;
   cvText?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   education?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   workExperience?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   projects?: any;
   summaryFeedback?: string;
   cheatEventCount?: number;
