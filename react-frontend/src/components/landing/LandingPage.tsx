@@ -1,9 +1,13 @@
-import { EquiHireLogo, LandingPageIllustration, AutomatedScreeningIcon, BiasEliminationIcon, RealTimeAnalyticsIcon } from "@/components/ui/Icons";
+import { EquiHireLogo, LandingPageIllustration } from "@/components/ui/Icons";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowRight, BarChart3, ShieldCheck, Zap, LogOut } from "lucide-react"
+import { ArrowRight, BarChart3, ShieldCheck, Zap, LogOut, Github } from "lucide-react"
 import { useAuthContext } from "@asgardeo/auth-react";
 import { motion } from "framer-motion";
+import automatedSvg from "@/assets/automated-pana.svg";
+import biasSvg from "@/assets/bias-elimination-pana.svg";
+import analyticsSvg from "@/assets/Setup Analytics-rafiki.svg";
+import docBroSvg from "@/assets/Online document-bro.svg";
 
 const FadeInWhenVisible = ({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) => (
     <motion.div
@@ -40,6 +44,9 @@ export default function LandingPageComponent() {
                         <a href="#features" className="transition-colors hover:text-primary">Features</a>
                         <a href="#solutions" className="transition-colors hover:text-primary">Solutions</a>
                         <a href="#docs" className="transition-colors hover:text-primary">Documentation</a>
+                        <a href="https://github.com/HasithaErandika/EquiHire-Core" target="_blank" rel="noopener noreferrer" className="flex items-center transition-colors hover:text-primary">
+                          <Github className="mr-1 h-4 w-4" /> GitHub
+                        </a>
                     </nav>
 
                     <div className="flex items-center space-x-4">
@@ -123,12 +130,20 @@ export default function LandingPageComponent() {
                 </section>
 
                 {/* Features Grid */}
-                <section id="features" className="py-24 bg-background">
-                    <div className="container mx-auto px-4">
+                <section id="features" className="py-24 relative overflow-hidden bg-background">
+                    {/* Background accoutrements */}
+                    <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
+                    <div className="absolute left-0 top-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
+                    
+                    <div className="container mx-auto px-4 relative z-10">
                         <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
                             <FadeInWhenVisible>
-                                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Why EquiHire?</h2>
-                                <p className="text-muted-foreground text-lg">
+                                <div className="inline-flex items-center rounded-full border border-primary/20 px-3 py-1 text-sm font-medium bg-primary/5 backdrop-blur-sm text-primary shadow-sm mb-4">
+                                    <span className="flex h-2 w-2 rounded-full bg-primary mr-2 shadow-[0_0_8px_var(--theme-primary)]"></span>
+                                    Core Engine
+                                </div>
+                                <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">Why EquiHire?</h2>
+                                <p className="text-muted-foreground text-lg mt-4">
                                     Built on a robust Ballerina orchestrator and intelligent AI engine,
                                     we deliver a seamless recruitment experience.
                                 </p>
@@ -138,20 +153,21 @@ export default function LandingPageComponent() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {/* Feature 1 */}
                             <FadeInWhenVisible delay={0.1}>
-                                <Card className="border-none shadow-lg bg-card/50 hover:bg-card hover:translate-y-[-8px] transition-all duration-300">
-                                    <CardHeader>
-                                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                                            <Zap className="h-6 w-6 text-primary" />
+                                <Card className="relative overflow-hidden border border-border/50 shadow-2xl bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:-translate-y-2 hover:shadow-primary/5 transition-all duration-500 group h-full">
+                                    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    <CardHeader className="relative z-10">
+                                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 shadow-inner ring-1 ring-primary/20 group-hover:scale-110 transition-transform duration-500">
+                                            <Zap className="h-7 w-7 text-primary drop-shadow-[0_0_8px_var(--theme-primary)]" />
                                         </div>
-                                        <CardTitle>Automated Screening</CardTitle>
+                                        <CardTitle className="text-xl">Automated Screening</CardTitle>
                                     </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <CardDescription className="text-base text-foreground/80">
+                                    <CardContent className="space-y-4 relative z-10">
+                                        <CardDescription className="text-base text-foreground/70 leading-relaxed">
                                             Instantly parse, rank, and analyze thousands of resumes using
                                             our advanced AI intelligence engine.
                                         </CardDescription>
-                                        <div className="mt-4 flex justify-center py-4">
-                                            <AutomatedScreeningIcon className="h-40 w-full" />
+                                        <div className="mt-8 flex justify-center py-6 bg-background/50 rounded-xl border border-border/50 shadow-sm group-hover:border-primary/20 transition-colors">
+                                            <img src={automatedSvg} alt="Automated Screening Illustration" className="h-40 w-full object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -159,20 +175,21 @@ export default function LandingPageComponent() {
 
                             {/* Feature 2 */}
                             <FadeInWhenVisible delay={0.2}>
-                                <Card className="border-none shadow-lg bg-card/50 hover:bg-card hover:translate-y-[-8px] transition-all duration-300 h-full">
-                                    <CardHeader>
-                                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                                            <ShieldCheck className="h-6 w-6 text-primary" />
+                                <Card className="relative overflow-hidden border border-border/50 shadow-2xl bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:-translate-y-2 hover:shadow-primary/5 transition-all duration-500 group h-full">
+                                    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    <CardHeader className="relative z-10">
+                                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 shadow-inner ring-1 ring-primary/20 group-hover:scale-110 transition-transform duration-500">
+                                            <ShieldCheck className="h-7 w-7 text-primary drop-shadow-[0_0_8px_var(--theme-primary)]" />
                                         </div>
-                                        <CardTitle>Bias Elimination</CardTitle>
+                                        <CardTitle className="text-xl">Bias Elimination</CardTitle>
                                     </CardHeader>
-                                    <CardContent>
-                                        <CardDescription className="text-base text-foreground/80">
+                                    <CardContent className="space-y-4 relative z-10">
+                                        <CardDescription className="text-base text-foreground/70 leading-relaxed">
                                             Our AI models are trained to redact personal information and
                                             focus solely on skills and experience, ensuring fair hiring.
                                         </CardDescription>
-                                        <div className="mt-4 flex justify-center py-4">
-                                            <BiasEliminationIcon className="h-40 w-full" />
+                                        <div className="mt-8 flex justify-center py-6 bg-background/50 rounded-xl border border-border/50 shadow-sm group-hover:border-primary/20 transition-colors">
+                                            <img src={biasSvg} alt="Bias Elimination Illustration" className="h-40 w-full object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -180,20 +197,21 @@ export default function LandingPageComponent() {
 
                             {/* Feature 3 */}
                             <FadeInWhenVisible delay={0.3}>
-                                <Card className="border-none shadow-lg bg-card/50 hover:bg-card hover:translate-y-[-8px] transition-all duration-300">
-                                    <CardHeader>
-                                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                                            <BarChart3 className="h-6 w-6 text-primary" />
+                                <Card className="relative overflow-hidden border border-border/50 shadow-2xl bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:-translate-y-2 hover:shadow-primary/5 transition-all duration-500 group h-full">
+                                    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    <CardHeader className="relative z-10">
+                                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 shadow-inner ring-1 ring-primary/20 group-hover:scale-110 transition-transform duration-500">
+                                            <BarChart3 className="h-7 w-7 text-primary drop-shadow-[0_0_8px_var(--theme-primary)]" />
                                         </div>
-                                        <CardTitle>Real-time Analytics</CardTitle>
+                                        <CardTitle className="text-xl">Real-time Analytics</CardTitle>
                                     </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <CardDescription className="text-base text-foreground/80">
+                                    <CardContent className="space-y-4 relative z-10">
+                                        <CardDescription className="text-base text-foreground/70 leading-relaxed">
                                             Visualize hiring pipelines, candidate drop-off rates, and
                                             time-to-hire metrics with our comprehensive dashboards.
                                         </CardDescription>
-                                        <div className="mt-4 flex justify-center py-4">
-                                            <RealTimeAnalyticsIcon className="h-40 w-full" />
+                                        <div className="mt-8 flex justify-center py-6 bg-background/50 rounded-xl border border-border/50 shadow-sm group-hover:border-primary/20 transition-colors">
+                                            <img src={analyticsSvg} alt="Analytics Illustration" className="h-40 w-full object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -203,15 +221,16 @@ export default function LandingPageComponent() {
                 </section>
 
                 {/* Solutions Section */}
-                <section id="solutions" className="py-24 bg-muted/30">
-                    <div className="container mx-auto px-4">
-                        <div className="text-center max-w-3xl mx-auto space-y-8">
+                <section id="solutions" className="py-24 relative overflow-hidden border-t border-border/40 bg-muted/10">
+                    <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:64px_64px]" />
+                    <div className="container mx-auto px-4 relative z-10">
+                        <div className="text-center max-w-3xl mx-auto space-y-8 p-12 rounded-[2.5rem] bg-background/40 backdrop-blur-2xl border border-border/50 shadow-2xl">
                             <FadeInWhenVisible>
-                                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">What is EquiHire For?</h2>
-                                <p className="text-lg text-muted-foreground leading-relaxed">
+                                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">What is EquiHire For?</h2>
+                                <p className="text-lg text-muted-foreground leading-relaxed mt-6">
                                     EquiHire is designed to revolutionize the recruitment process by leveraging the power of AI.
                                     It serves as a bridge between talented candidates and forward-thinking companies, ensuring
-                                    every application is evaluated fairly and efficiently. Whether you are a startup looking for
+                                    every application is evaluated virtually and efficiently. Whether you are a startup looking for
                                     your first engineer or an enterprise scaling your team, EquiHire automates the heavy lifting
                                     of resume screening and bias elimination.
                                 </p>
@@ -220,72 +239,93 @@ export default function LandingPageComponent() {
                     </div>
                 </section>
 
-  
                 {/* Documentation Section */}
-                <section id="docs" className="py-24 bg-muted/30">
-                    <div className="container mx-auto px-4">
-                        <FadeInWhenVisible>
-                            <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-                                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Documentation</h2>
-                                <p className="text-muted-foreground text-lg">
-                                    Everything you need to know about integrating and using EquiHire.
-                                </p>
+                <section id="docs" className="py-24 relative overflow-hidden border-t border-border/40 bg-background">
+                    <div className="absolute left-0 bottom-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] -z-10 pointer-events-none" />
+                    
+                    <div className="container mx-auto px-4 relative z-10">
+                        <div className="grid lg:grid-cols-2 gap-12 items-center">
+                            
+                            <div className="space-y-12">
+                                <FadeInWhenVisible>
+                                    <div className="text-left space-y-4">
+                                        <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">Documentation</h2>
+                                        <p className="text-muted-foreground text-lg">
+                                            Everything you need to know about integrating and using EquiHire.
+                                        </p>
+                                    </div>
+                                </FadeInWhenVisible>
+
+                                <div className="space-y-6 max-w-xl">
+                                    <FadeInWhenVisible delay={0.1}>
+                                        <Card className="border border-border/50 shadow-xl bg-card/40 backdrop-blur-md hover:border-primary/40 hover:shadow-primary/10 transition-all cursor-pointer group hover:bg-card/80 overflow-hidden relative">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                            <CardHeader className="relative z-10">
+                                                <CardTitle className="flex items-center text-xl group-hover:text-primary transition-colors">
+                                                    <Zap className="mr-3 h-6 w-6 text-primary/80 group-hover:text-primary group-hover:scale-110 transition-all" /> User Guide
+                                                </CardTitle>
+                                                <CardDescription className="text-base pt-2">
+                                                    Step-by-step guides to setting up your first job posting and configuring AI parameters.
+                                                </CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="relative z-10 mt-2">
+                                                <Button variant="link" className="p-0 h-auto font-semibold text-primary/80 group-hover:text-primary" onClick={() => window.location.href = '/documentation/guide'}>
+                                                    Read the guide <ArrowRight className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                                                </Button>
+                                            </CardContent>
+                                        </Card>
+                                    </FadeInWhenVisible>
+
+                                    <FadeInWhenVisible delay={0.2}>
+                                        <Card className="border border-border/50 shadow-xl bg-card/40 backdrop-blur-md hover:border-primary/40 hover:shadow-primary/10 transition-all cursor-pointer group hover:bg-card/80 overflow-hidden relative">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                            <CardHeader className="relative z-10">
+                                                <CardTitle className="flex items-center text-xl group-hover:text-primary transition-colors">
+                                                    <BarChart3 className="mr-3 h-6 w-6 text-primary/80 group-hover:text-primary group-hover:scale-110 transition-all" /> API Reference
+                                                </CardTitle>
+                                                <CardDescription className="text-base pt-2">
+                                                    Comprehensive API documentation for integrating EquiHire with your existing HR stack.
+                                                </CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="relative z-10 mt-2">
+                                                <Button variant="link" className="p-0 h-auto font-semibold text-primary/80 group-hover:text-primary" onClick={() => window.location.href = '/documentation/api'}>
+                                                    View API docs <ArrowRight className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                                                </Button>
+                                            </CardContent>
+                                        </Card>
+                                    </FadeInWhenVisible>
+                                </div>
                             </div>
-                        </FadeInWhenVisible>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                            <FadeInWhenVisible delay={0.1}>
-                                <Card className="hover:border-primary/50 transition-all cursor-pointer group hover:bg-card">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center group-hover:text-primary transition-colors">
-                                            <Zap className="mr-3 h-6 w-6" /> Quick Start Guide
-                                        </CardTitle>
-                                        <CardDescription>
-                                            Step-by-step guides to setting up your first job posting and configuring AI parameters.
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Button variant="link" className="p-0 h-auto group-hover:underline" onClick={() => window.location.href = '/documentation/guide'}>Read the guide <ArrowRight className="ml-1 h-4 w-4" /></Button>
-                                    </CardContent>
-                                </Card>
-                            </FadeInWhenVisible>
-
-                            <FadeInWhenVisible delay={0.2}>
-                                <Card className="hover:border-primary/50 transition-all cursor-pointer group hover:bg-card">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center group-hover:text-primary transition-colors">
-                                            <BarChart3 className="mr-3 h-6 w-6" /> API Reference
-                                        </CardTitle>
-                                        <CardDescription>
-                                            Comprehensive API documentation for integrating EquiHire with your existing HR stack.
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Button variant="link" className="p-0 h-auto group-hover:underline" onClick={() => window.location.href = '/documentation/api'}>View API docs <ArrowRight className="ml-1 h-4 w-4" /></Button>
-                                    </CardContent>
-                                </Card>
-                            </FadeInWhenVisible>
+                            
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.8, delay: 0.3 }}
+                                className="flex justify-center flex-col items-center lg:items-end w-full"
+                            >
+                                <div className="relative w-full max-w-lg aspect-square">
+                                    <div className="absolute inset-0 bg-primary/10 rounded-full blur-[80px]" />
+                                    <img src={docBroSvg} alt="Documentation Illustration" className="relative z-10 w-full h-full object-contain drop-shadow-2xl hover:scale-[1.02] transition-transform duration-700" />
+                                </div>
+                            </motion.div>
+                            
                         </div>
                     </div>
                 </section>
 
                 {/* CTA Section */}
-                <section className="py-24 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-primary -z-10" />
-                    <div className="absolute inset-0 bg-grid-white/10 -z-10" />
-                    <div className="container mx-auto px-4 text-center space-y-8">
+                <section className="py-24 relative overflow-hidden border-t border-border/40">
+                    <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent -z-10" />
+                    <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px] -z-10" />
+                    <div className="container mx-auto px-4 text-center space-y-8 relative z-10">
                         <FadeInWhenVisible>
-                            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl text-primary-foreground">Ready to transform your hiring?</h2>
-                            <p className="text-primary-foreground/80 max-w-2xl mx-auto text-lg mb-8">
+                            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">Ready to transform your hiring?</h2>
+                            <p className="text-muted-foreground max-w-2xl mx-auto text-lg mb-8 mt-4">
                                 Join thousands of companies using EquiHire to build diverse, high-performing teams.
                             </p>
-                            <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 max-w-md mx-auto">
-                                <Button size="lg" variant="secondary" className="w-full sm:w-auto h-12 shadow-xl" onClick={() => signIn({ prompt: "create" })}>
-                                    Start Hiring for Free
-                                </Button>
-                            </div>
-                            <p className="text-xs text-primary-foreground/60 mt-4">
-                                No credit card required. Always free community edition.
+                            <p className="text-sm text-muted-foreground/80 mt-8 font-medium bg-muted/50 inline-block px-4 py-2 rounded-full border border-border/50">
+                                Free community edition.
                             </p>
                         </FadeInWhenVisible>
                     </div>
@@ -293,42 +333,41 @@ export default function LandingPageComponent() {
             </main>
 
             {/* Footer */}
-            <footer className="bg-background border-t py-12 text-sm text-muted-foreground">
-                <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+            <footer className="bg-muted/10 border-t border-border/40 py-16 text-sm text-muted-foreground backdrop-blur-md">
+                <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-12 mb-12">
                     <div className="space-y-4">
-                        <h3 className="font-bold text-foreground">Product</h3>
-                        <ul className="space-y-2">
-                            <li><a href="#" className="hover:text-primary">Features</a></li>
-                            <li><a href="#" className="hover:text-primary">Integrations</a></li>
-                            <li><a href="#" className="hover:text-primary">Pricing</a></li>
-                            <li><a href="#" className="hover:text-primary">Security</a></li>
+                        <h3 className="font-bold text-foreground text-base">Product</h3>
+                        <ul className="space-y-3">
+                            <li><a href="#features" className="hover:text-primary transition-colors">Features</a></li>
+                            <li><a href="#" className="hover:text-primary transition-colors">Integrations</a></li>
+                            <li><a href="#" className="hover:text-primary transition-colors">Pricing</a></li>
+                            <li><a href="#" className="hover:text-primary transition-colors">Security</a></li>
                         </ul>
                     </div>
                     <div className="space-y-4">
-                        <h3 className="font-bold text-foreground">Resources</h3>
-                        <ul className="space-y-2">
-                            <li><a href="#" className="hover:text-primary">Documentation</a></li>
-                            <li><a href="#" className="hover:text-primary">API Reference</a></li>
-                            <li><a href="#" className="hover:text-primary">Blog</a></li>
-                            <li><a href="#" className="hover:text-primary">Community</a></li>
+                        <h3 className="font-bold text-foreground text-base">Resources</h3>
+                        <ul className="space-y-3">
+                            <li><a href="/documentation/guide" className="hover:text-primary transition-colors">Documentation</a></li>
+                            <li><a href="/documentation/api" className="hover:text-primary transition-colors">API Reference</a></li>
+                            <li><a href="#" className="hover:text-primary transition-colors">Blog</a></li>
+                            <li><a href="#" className="hover:text-primary transition-colors">Community</a></li>
                         </ul>
                     </div>
                     <div className="space-y-4 hidden md:block col-span-2">
-                        <h3 className="font-bold text-foreground">EquiHire</h3>
-                        <p className="max-w-xs">
+                        <div className="flex items-center space-x-3 mb-4">
+                            <EquiHireLogo className="w-8 h-8 text-primary drop-shadow-[0_0_8px_var(--theme-primary)]" />
+                            <span className="font-bold text-xl text-foreground tracking-tight">EquiHire</span>
+                        </div>
+                        <p className="max-w-sm text-muted-foreground/80 leading-relaxed text-base">
                             The intelligent hiring platform for modern teams. Built with love using Ballerina and React.
                         </p>
-                        <div className="flex items-center space-x-4 pt-4">
-                            <EquiHireLogo className="w-6 h-6 opacity-50" />
-                            <span className="font-medium">EquiHire</span>
-                        </div>
                     </div>
                 </div>
-                <div className="container mx-auto px-4 pt-8 border-t flex flex-col md:flex-row items-center justify-between">
-                    <p>© 2026 EquiHire. All rights reserved.</p>
-                    <div className="flex space-x-4 mt-4 md:mt-0">
-                        <a href="#" className="hover:text-primary">Privacy Policy</a>
-                        <a href="#" className="hover:text-primary">Terms of Service</a>
+                <div className="container mx-auto px-4 pt-8 border-t border-border/40 flex flex-col md:flex-row items-center justify-between">
+                    <p className="text-muted-foreground/80 font-medium">© 2026 EquiHire. All rights reserved.</p>
+                    <div className="flex space-x-6 mt-4 md:mt-0 font-medium">
+                        <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
+                        <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
                     </div>
                 </div>
             </footer>

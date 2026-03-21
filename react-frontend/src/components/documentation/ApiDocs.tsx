@@ -1,122 +1,135 @@
 import { EquiHireLogo } from "@/components/ui/Icons";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Terminal, Shield, Database } from "lucide-react";
+import { LogOut, Github } from "lucide-react";
+import { useAuthContext } from "@asgardeo/auth-react";
+import { motion } from "framer-motion";
+import apiEndpointsDoc from "../../../../doc/api-endpoints.md?raw";
+import MarkdownRenderer from "./MarkdownRenderer";
+import apiDocsSvg from "@/assets/Fill out-pana.svg";
 
 export default function ApiDocs() {
+  const { state, signIn, signOut } = useAuthContext();
+
   return (
-    <div className="min-h-screen bg-background flex flex-col font-sans text-foreground">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" onClick={() => window.location.href = '/'}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center space-x-2 border-l pl-4">
-              <EquiHireLogo className="w-6 h-6" />
-              <span className="font-bold text-lg tracking-tight">EquiHire Docs</span>
-            </div>
+    <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/30"
+    >
+      {/* Navigation */}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+              <div className="flex items-center space-x-2 cursor-pointer" onClick={() => window.location.href = '/'}>
+                  <EquiHireLogo className="w-8 h-8" />
+                  <span className="font-bold text-xl tracking-tight">EquiHire Docs</span>
+              </div>
+
+              <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+                  <a href="/documentation/guide" className="transition-colors hover:text-primary text-muted-foreground hover:text-foreground">User Guide</a>
+                  <a href="/documentation/api" className="text-primary font-semibold relative after:absolute after:-bottom-[21px] after:left-0 after:h-0.5 after:w-full after:bg-primary">API Reference</a>
+                  <a href="https://github.com/HasithaErandika/EquiHire-Core" target="_blank" rel="noopener noreferrer" className="flex items-center transition-colors text-muted-foreground hover:text-foreground">
+                    <Github className="mr-1 h-4 w-4" /> GitHub
+                  </a>
+              </nav>
+
+              <div className="flex items-center space-x-4">
+                  {state.isAuthenticated ? (
+                      <div className="flex items-center gap-4">
+                          <span className="text-sm font-medium hidden sm:block">
+                              Hello, {state.username}
+                          </span>
+                          <Button variant="outline" onClick={() => signOut()}>
+                              <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                          </Button>
+                      </div>
+                  ) : (
+                      <>
+                          <button className="text-sm font-medium hover:underline underline-offset-4 hidden sm:block" onClick={() => signIn()}>
+                              Log in
+                          </button>
+                      </>
+                  )}
+              </div>
           </div>
-          <nav className="text-sm font-medium space-x-4">
-            <a href="/documentation/guide" className="text-muted-foreground hover:text-primary transition-colors">User Guide</a>
-            <a href="/documentation/api" className="text-primary font-semibold">API Reference</a>
-          </nav>
-        </div>
       </header>
 
-      <div className="container mx-auto px-4 flex-1 flex flex-col md:flex-row gap-8 py-8 lg:py-12">
+      {/* Hero Section */}
+      <section className="relative py-20 md:py-24 overflow-hidden border-b border-border/40 bg-zinc-950">
+        <div className="container mx-auto px-4 relative z-10 flex flex-col lg:flex-row items-center gap-12 text-zinc-50">
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="flex-1 space-y-6 text-left"
+          >
+            <div className="inline-flex items-center rounded-full border border-zinc-700/50 px-3 py-1 text-sm font-medium bg-zinc-900/50 backdrop-blur-sm text-zinc-300">
+              <span className="flex h-2 w-2 rounded-full bg-blue-500 mr-2 shadow-[0_0_8px_rgb(59,130,246)]"></span>
+              Developer Tools
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white to-zinc-400">
+              REST API Reference
+            </h1>
+            <p className="text-lg md:text-xl text-zinc-400 leading-relaxed max-w-xl">
+              Integrate EquiHire directly into your HR stack. Use our powerful REST API to programmatically manage jobs, access candidates, and retrieve AI screening analytics.
+            </p>
+          </motion.div>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="flex-1 flex justify-center flex-col items-center lg:justify-end"
+          >
+            <img src={apiDocsSvg} alt="API Documentation Illustration" className="w-[350px] md:w-[450px] drop-shadow-2xl" />
+          </motion.div>
+        </div>
+        
+        {/* Background Gradient matching Landing Page glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      </section>
+
+      <div className="container mx-auto px-4 flex-1 flex flex-col items-start md:flex-row gap-12 py-12">
         {/* Sidebar */}
-        <aside className="w-full md:w-64 shrink-0 space-y-6">
+        <aside className="w-full md:w-64 shrink-0 space-y-8 hidden md:block sticky top-24 h-[calc(100vh-8rem)] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-muted">
           <div className="space-y-4">
-            <h3 className="font-semibold text-sm tracking-wider uppercase text-muted-foreground">API Reference</h3>
-            <div className="flex flex-col space-y-2">
-              <a href="#authentication" className="text-sm font-medium text-primary bg-primary/10 px-3 py-2 rounded-md">Authentication</a>
-              <a href="#endpoints" className="text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2 transition-colors">Core Endpoints</a>
-              <a href="#models" className="text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2 transition-colors">Data Models</a>
+            <h3 className="font-bold text-xs tracking-widest uppercase text-muted-foreground/70">API Reference</h3>
+            <div className="flex flex-col border-l border-border/50">
+              <a href="#base-url" className="text-sm font-medium text-muted-foreground hover:text-foreground pl-4 py-2 transition-colors hover:border-l-2 hover:border-foreground/20">Authentication</a>
+              <a href="#api-endpoints-ballerina-gateway-port-9092" className="text-sm font-medium text-muted-foreground hover:text-foreground pl-4 py-2 transition-colors hover:border-l-2 hover:border-foreground/20">Core Endpoints</a>
+              <a href="#postman-collection-professional-setup" className="text-sm font-medium text-muted-foreground hover:text-foreground pl-4 py-2 transition-colors hover:border-l-2 hover:border-foreground/20">Data Models</a>
             </div>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 max-w-4xl space-y-12">
-          <section className="space-y-4">
-            <div className="inline-flex items-center space-x-2 text-primary font-medium mb-2">
-              <Terminal className="h-5 w-5" />
-              <span>API Documentation</span>
-            </div>
-            <h1 className="text-4xl font-bold tracking-tight">REST API Reference</h1>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              Integrate EquiHire directly into your HR stack. Our REST API allows you to programmatically
-              manage jobs, candidates, and retrieve AI screening analytics.
-            </p>
-          </section>
-
-          <hr className="border-border" />
-
-          <section id="authentication" className="space-y-6">
-            <div className="flex items-center space-x-3">
-              <Shield className="h-6 w-6 text-foreground" />
-              <h2 className="text-2xl font-semibold tracking-tight">Authentication</h2>
-            </div>
-            <p className="text-muted-foreground">
-              All API requests require a valid Bearer token from Asgardeo in the Authorization header.
-            </p>
-            <div className="bg-muted p-4 rounded-lg font-mono text-sm overflow-x-auto border">
-              <code>Authorization: Bearer &lt;YOUR_ACCESS_TOKEN&gt;</code>
-            </div>
-          </section>
-
-          <section id="endpoints" className="space-y-8">
-            <div className="flex items-center space-x-3">
-              <Database className="h-6 w-6 text-foreground" />
-              <h2 className="text-2xl font-semibold tracking-tight">Core Endpoints</h2>
-            </div>
-
-            {/* Endpoint 1 */}
-            <div className="border rounded-xl overflow-hidden bg-card">
-              <div className="bg-muted/50 px-4 py-3 border-b flex items-center space-x-3">
-                <span className="font-bold text-xs uppercase tracking-widest text-[#FF7300] bg-[#FF7300]/10 px-2 py-1 rounded">GET</span>
-                <code className="font-mono text-sm font-semibold">/api/v1/jobs</code>
-              </div>
-              <div className="p-4 space-y-3">
-                <p className="text-muted-foreground text-sm">Retrieves a list of all active job postings for your organization.</p>
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Response Example</h4>
-                  <pre className="bg-zinc-950 text-zinc-50 p-4 rounded-lg text-xs overflow-x-auto shadow-inner">
-{`{
-  "data": [
-    {
-      "id": "job_123",
-      "title": "Senior Software Engineer",
-      "department": "Engineering",
-      "status": "published"
-    }
-  ],
-  "meta": { "total": 1 }
-}`}
-                  </pre>
-                </div>
-              </div>
-            </div>
-
-            {/* Endpoint 2 */}
-            <div className="border rounded-xl overflow-hidden bg-card">
-              <div className="bg-muted/50 px-4 py-3 border-b flex items-center space-x-3">
-                <span className="font-bold text-xs uppercase tracking-widest text-blue-500 bg-blue-500/10 px-2 py-1 rounded">POST</span>
-                <code className="font-mono text-sm font-semibold">/api/v1/candidates</code>
-              </div>
-              <div className="p-4 space-y-3">
-                <p className="text-muted-foreground text-sm">Creates a new candidate and triggers the AI screening workflow.</p>
-              </div>
-            </div>
-
-          </section>
-
-          <footer className="pt-12 text-sm text-muted-foreground">
-            <p>API requests are rate limited to 100 requests per minute.</p>
-          </footer>
-        </main>
+        <motion.main 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="flex-1 max-w-4xl min-w-0"
+        >
+          <MarkdownRenderer content={apiEndpointsDoc} />
+        </motion.main>
       </div>
-    </div>
+
+      <footer className="w-full border-t border-border/40 bg-muted/10 py-10 mt-12 backdrop-blur-md">
+        <div className="container mx-auto px-4 flex flex-col items-center justify-center text-center space-y-4">
+          <div className="flex items-center space-x-2 text-muted-foreground">
+            <EquiHireLogo className="w-5 h-5 opacity-50" />
+            <span className="font-semibold tracking-tight">EquiHire Docs</span>
+          </div>
+          <p className="text-sm text-muted-foreground max-w-md">
+            The intelligent platform for equitable, unbiased hiring processes.
+          </p>
+          <div className="pt-4 w-full">
+            <p className="text-xs text-muted-foreground/60 transition-colors">
+              <a href="https://storyset.com/people" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary transition-colors">
+                People illustrations by Storyset
+              </a>
+            </p>
+          </div>
+        </div>
+      </footer>
+    </motion.div>
   );
 }

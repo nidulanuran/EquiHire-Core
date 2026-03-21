@@ -39,7 +39,7 @@ docker-compose.override.yml
 
 # Environment Variables (Safety catch-all)
 *.env
-*.html
+# *.html
 *.pdf
 .env*
 !.env.example
