@@ -60,6 +60,11 @@ public function validateToken(string token) returns types:TokenValidationRespons
     string usedAt = time:utcToString(time:utcNow());
     check repositories:acceptInvitation(result.id, usedAt);
 
+    _ = start repositories:createAuditLog(
+        result.organization_id, (),
+        constants:AUDIT_INVITATION_ACCEPTED, "Invitation", result.id,
+        {"candidateEmail": result.candidate_email, "jobId": result.job_id});
+
     log:printInfo("Token validated", candidateEmail = result.candidate_email);
     return {
         valid: true,

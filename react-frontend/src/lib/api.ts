@@ -278,40 +278,49 @@ export async function getCandidates(orgId: string): Promise<Candidate[]> {
 /**
  * Applies accept/reject decision for a candidate.
  * @param candidateId - The candidate ID
- * @param threshold - The auto-pass threshold (0-100)
- * @param decision - Explicit decision: 'auto' (use threshold), 'accepted', or 'rejected'
+ * @param decision - Explicit decision: 'accepted' or 'rejected'
  */
 export async function decideCandidate(
   candidateId: string,
-  threshold: number,
-  decision: 'auto' | 'accepted' | 'rejected' = 'auto'
+  decision: 'accepted' | 'rejected'
 ): Promise<unknown> {
   const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/decide`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ threshold, decision }),
+    body: JSON.stringify({ decision }),
   });
   if (!response.ok) throw new Error('Decision failed');
   return response.json();
 }
 
 /**
- * Updates a job by id.
+ * Updates a job by id. Pass organizationId + userId for audit logging.
  */
-export async function updateJob(jobId: string, data: UpdateJobPayload): Promise<void> {
+export async function updateJob(
+  jobId: string,
+  data: UpdateJobPayload,
+  context?: { organizationId?: string; userId?: string }
+): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, ...context }),
   });
   if (!response.ok) throw new Error('Failed to update job');
 }
 
 /**
- * Deletes a job by id.
+ * Deletes a job by id. Pass organizationId + userId for audit logging.
  */
-export async function deleteJob(jobId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, { method: 'DELETE' });
+export async function deleteJob(
+  jobId: string,
+  context?: { organizationId?: string; recruiterId?: string }
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...context }),
+  });
   if (!response.ok) throw new Error('Failed to delete job');
 }
 

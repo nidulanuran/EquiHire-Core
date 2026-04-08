@@ -51,6 +51,16 @@ service /api on apiListener {
             log:printError("CV upload failed", 'error = result);
             return <http:InternalServerError>{body: {"error": result.message()}};
         }
+
+        // Audit: CV Uploaded — best-effort, resolved from candidateId returned by upload service
+        string uploadedCandidateId = (<map<json>>result.toJson())["candidateId"].toString();
+        string|error cvOrgId = repositories:getOrganizationIdForCandidate(uploadedCandidateId);
+        if cvOrgId is string {
+            _ = start repositories:createAuditLog(
+                cvOrgId, (), constants:AUDIT_CV_UPLOADED, "Candidate", uploadedCandidateId,
+                {"jobId": jobId is () ? "" : <string>jobId});
+        }
+
         return result;
     }
 
@@ -70,6 +80,15 @@ service /api on apiListener {
             log:printError("startSession failed", 'error = result, candidateId = candidateId);
             return <http:InternalServerError>{body: {"error": result.message()}};
         }
+
+        // Audit: Session Started
+        string|error sessOrgId = repositories:getOrganizationIdForCandidate(candidateId);
+        if sessOrgId is string {
+            _ = start repositories:createAuditLog(
+                sessOrgId, (), constants:AUDIT_SESSION_STARTED, "Candidate", candidateId,
+                {"jobId": jobId, "invitationId": invitationId});
+        }
+
         return result;
     }
 
@@ -105,6 +124,13 @@ service /api on apiListener {
                     'error = result, candidateId = candidateId);
             return <http:InternalServerError>{body: {"error": result.message()}};
         }
+        // Audit: CV Accessed (PII reveal)
+        string|error revealOrgId = repositories:getOrganizationIdForCandidate(candidateId);
+        if revealOrgId is string {
+            _ = start repositories:createAuditLog(
+                revealOrgId, (), constants:AUDIT_CV_ACCESSED, "Candidate", candidateId,
+                {"action": "PII identity revealed"});
+        }
         return result;
     }
 
@@ -136,11 +162,16 @@ service /api on apiListener {
     resource function put organization(@http:Payload json payload)
             returns json|http:InternalServerError {
         map<json> d = <map<json>>payload;
+        string orgId = d["organizationId"].toString();
         error? err = repositories:updateOrganization(
-                d["organizationId"].toString(), d["industry"].toString(), d["size"].toString());
+                orgId, d["industry"].toString(), d["size"].toString());
         if err is error {
             return <http:InternalServerError>{body: {"error": err.message()}};
         }
+        // Audit: Organization Updated
+        _ = start repositories:createAuditLog(
+            orgId, (), constants:AUDIT_ORGANIZATION_UPDATED, "Organization", orgId,
+            {"industry": d["industry"].toString(), "size": d["size"].toString()});
         return {"status": "updated"};
     }
 
@@ -183,15 +214,28 @@ service /api on apiListener {
         if err is error {
             return <http:InternalServerError>{body: {"error": err.message()}};
         }
+        // Audit: Job Updated (only when org context is provided by caller)
+        if payload.organizationId is string {
+            _ = start repositories:createAuditLog(
+                <string>payload.organizationId, payload.recruiterId,
+                constants:AUDIT_JOB_UPDATED, "Job", jobId,
+                {"title": payload.title});
+        }
         return {"status": "updated"};
     }
 
-    resource function delete jobs/[string jobId]()
+    resource function delete jobs/[string jobId](@http:Payload json payload)
             returns json|http:InternalServerError {
+        map<json> d = <map<json>>payload;
         error? err = repositories:deleteJob(jobId);
         if err is error {
             return <http:InternalServerError>{body: {"error": err.message()}};
         }
+        // Audit: Job Deleted
+        _ = start repositories:createAuditLog(
+            d["organizationId"].toString(), d["recruiterId"] is () ? () : d["recruiterId"].toString(),
+            constants:AUDIT_JOB_DELETED, "Job", jobId,
+            {"jobId": jobId});
         return {"status": "deleted"};
     }
 
@@ -308,10 +352,8 @@ service /api on apiListener {
             eval = evalResult;
         }
 
-        // Step 2: Determine accept/reject based on explicit decision or threshold
-        boolean pass = payload.decision == "accepted" ? true :
-                       payload.decision == "rejected" ? false :
-                       eval.overallScore >= payload.threshold;
+        // Step 2: Determine pass/fail based strictly on explicit decision (threshold removed)
+        boolean pass = payload.decision == "accepted";
         string newStatus = pass ? "accepted" : "rejected";
 
         // Step 3: Update database status — this is CRITICAL, fail fast if it errors
@@ -327,7 +369,7 @@ service /api on apiListener {
 
         // Step 4: Fetch contact info for email (graceful — email failure does not block the decision)
         boolean emailSent = false;
-        var contact = repositories:getCandidateContact(candidateId);
+        var contact = repositories:getCandidateName(candidateId);
         if contact is error {
             log:printWarn("Could not fetch contact info for email, skipping email",
                     candidateId = candidateId, 'error = contact);
@@ -400,7 +442,7 @@ service /api on apiListener {
     // --- Transcript ---
     resource function get candidates/[string candidateId]/transcript()
             returns types:TranscriptResponse|http:InternalServerError {
-        
+
         var transcriptResult = repositories:getCandidateTranscript(candidateId);
         if transcriptResult is error {
             log:printError("Failed to fetch transcript", 'error = transcriptResult, candidateId = candidateId);
@@ -410,9 +452,39 @@ service /api on apiListener {
         string|error nameResult = repositories:getCandidateDisplayName(candidateId);
         string name = nameResult is error ? "Unknown Candidate" : nameResult;
 
+        // Audit: Transcript Viewed
+        string|error txOrgId = repositories:getOrganizationIdForCandidate(candidateId);
+        if txOrgId is string {
+            _ = start repositories:createAuditLog(
+                txOrgId, (), constants:AUDIT_TRANSCRIPT_GENERATED, "Candidate", candidateId,
+                {"candidateName": name, "questionCount": transcriptResult.length()});
+        }
+
+        var evalResult2 = repositories:getCandidateEvaluation(candidateId);
+        float txOverall = 0.0;
+        float txCv = 0.0;
+        float txSkills = 0.0;
+        float txInterview = 0.0;
+        string txFeedback = "";
+        if evalResult2 is record {|decimal overallScore; decimal cvScore; decimal skillsScore; decimal interviewScore; string summaryFeedback;|} {
+            txOverall = <float>evalResult2.overallScore;
+            txCv = <float>evalResult2.cvScore;
+            txSkills = <float>evalResult2.skillsScore;
+            txInterview = <float>evalResult2.interviewScore;
+            txFeedback = evalResult2.summaryFeedback;
+        }
+
         return {
             candidateId: candidateId,
             candidateName: name,
+            candidateEmail: "",
+            jobTitle: "",
+            appliedDate: "",
+            overallScore: txOverall,
+            cvScore: txCv,
+            skillsScore: txSkills,
+            interviewScore: txInterview,
+            summaryFeedback: txFeedback,
             transcript: transcriptResult
         };
     }
@@ -467,23 +539,33 @@ service /api on apiListener {
         map<json> d = <map<json>>payload;
         string promptTemplate = d["prompt_template"] is () ? d["promptTemplate"].toString() : d["prompt_template"].toString();
         string templateType = d["type"] is () ? "QUESTIONNAIRE" : d["type"].toString();
+        string tmplOrgId = d["organizationId"].toString();
         error? err = repositories:updateEvaluationTemplate(
                 id, d["name"].toString(), d["description"].toString(), templateType,
-                promptTemplate, d["organizationId"].toString());
+                promptTemplate, tmplOrgId);
         if err is error {
             return <http:InternalServerError>{body: {"error": err.message()}};
         }
+        // Audit: Template Updated
+        _ = start repositories:createAuditLog(
+            tmplOrgId, (), constants:AUDIT_TEMPLATE_UPDATED, "EvaluationTemplate", id,
+            {"name": d["name"].toString(), "type": templateType});
         return {"status": "updated"};
     }
 
     resource function delete evaluation\-templates/[string id](@http:Payload json payload)
             returns json|http:InternalServerError {
         map<json> d = <map<json>>payload;
+        string delTmplOrgId = d["organizationId"].toString();
         error? err = repositories:deleteEvaluationTemplate(
-                id, d["organizationId"].toString());
+                id, delTmplOrgId);
         if err is error {
             return <http:InternalServerError>{body: {"error": err.message()}};
         }
+        // Audit: Template Deleted
+        _ = start repositories:createAuditLog(
+            delTmplOrgId, (), constants:AUDIT_TEMPLATE_DELETED, "EvaluationTemplate", id,
+            {"templateId": id});
         return {"status": "deleted"};
     }
 

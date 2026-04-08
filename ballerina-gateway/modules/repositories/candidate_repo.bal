@@ -149,6 +149,24 @@ public function createSecureIdentity(string candidateId, string r2ObjectKey, str
 
 // insertSecureIdentity removed — was a dead duplicate of createSecureIdentity.
 
+public function getR2ObjectKey(string candidateId) returns string|error {
+    string path = string `/rest/v1/secure_identities?candidate_id=eq.${candidateId}&select=r2_object_key`;
+    http:Response resp = check clients:supabaseHttpClient->get(
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+    if resp.statusCode >= 300 {
+        return error("getR2ObjectKey: lookup failed for " + candidateId);
+    }
+    json[] rows = <json[]>check resp.getJsonPayload();
+    if rows.length() == 0 {
+        return error("getR2ObjectKey: no secure identity entry for " + candidateId);
+    }
+    json key = (<map<json>>rows[0])["r2_object_key"];
+    if key is () {
+        return error("getR2ObjectKey: r2_object_key is null for " + candidateId);
+    }
+    return key.toString();
+}
+
 // ---------------------------------------------------------------------------
 // Candidate Decision Support & Evaluation
 // ---------------------------------------------------------------------------
@@ -209,7 +227,49 @@ public function getCandidateDisplayName(string candidateId) returns string|error
     return string `Candidate #${candidateId.substring(0, 8)}`;
 }
 
+public function getCandidateName(string candidateId) returns record {|string candidateName; string candidateEmail; string jobTitle;|}|error {
+    string path = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=invitation_id,job_id`;
+    http:Response resp = check clients:supabaseHttpClient->get(
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+    if resp.statusCode >= 300 { return error("getCandidateName: profile not found for " + candidateId); }
+    json[] profiles = <json[]>check resp.getJsonPayload();
+    if profiles.length() == 0 { return error("Candidate not found: " + candidateId); }
+    map<json> profile = <map<json>>profiles[0];
+    string invId = profile["invitation_id"] is () ? "" : profile["invitation_id"].toString();
+    string jobId = profile["job_id"] is () ? "" : profile["job_id"].toString();
 
+    string candidateEmail = "";
+    string nameFallback = string `Candidate #${candidateId.substring(0, 8)}`;
+    string candidateNameVal = nameFallback;
+    string jobTitleVal = "the applied role";
+
+    if invId != "" {
+        string invPath = string `/rest/v1/interview_invitations?id=eq.${invId}&select=candidate_name,candidate_email`;
+        http:Response iResp = check clients:supabaseHttpClient->get(
+            invPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        if iResp.statusCode < 300 {
+            json[] invs = <json[]>check iResp.getJsonPayload();
+            if invs.length() > 0 {
+                map<json> inv = <map<json>>invs[0];
+                candidateNameVal = inv["candidate_name"] is () ? nameFallback : inv["candidate_name"].toString();
+                candidateEmail = inv["candidate_email"] is () ? "" : inv["candidate_email"].toString();
+            }
+        }
+    }
+    if jobId != "" {
+        string jobPath = string `/rest/v1/jobs?id=eq.${jobId}&select=title`;
+        http:Response jResp = check clients:supabaseHttpClient->get(
+            jobPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        if jResp.statusCode < 300 {
+            json[] jobs = <json[]>check jResp.getJsonPayload();
+            if jobs.length() > 0 {
+                json t = (<map<json>>jobs[0])["title"];
+                jobTitleVal = t is () ? jobTitleVal : t.toString();
+            }
+        }
+    }
+    return {candidateName: candidateNameVal, candidateEmail: candidateEmail, jobTitle: jobTitleVal};
+}
 
 public function getCvRawText(string candidateId) returns string|error {
     string path = string `/rest/v1/cv_parsed_sections?candidate_id=eq.${candidateId}&select=raw_text`;
@@ -226,43 +286,58 @@ public function getCvRawText(string candidateId) returns string|error {
     return rawText is () ? "" : rawText.toString();
 }
 
-public function getCandidateContact(string candidateId) returns record {|string candidateName; string candidateEmail; string jobTitle;|}|error {
-    string profPath = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=invitation_id`;
+public function getCandidateTranscriptMetadata(string candidateId) returns record {|string name; string email; string role; string appliedDate; string jobId;|}|error {
+    string profPath = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=invitation_id,created_at,job_id`;
     http:Response profResp = check clients:supabaseHttpClient->get(
-        profPath, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+        profPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if profResp.statusCode >= 300 {
-        return error("getCandidateContact: profile lookup failed for " + candidateId);
+        return error("getCandidateTranscriptMetadata: profile lookup failed for " + candidateId);
     }
     json[] profs = <json[]>check profResp.getJsonPayload();
     if profs.length() == 0 {
-        return error("getCandidateContact: no profile for " + candidateId);
+        return error("getCandidateTranscriptMetadata: no profile for " + candidateId);
     }
-    string invId = (<map<json>>profs[0])["invitation_id"].toString();
+    map<json> prof = <map<json>>profs[0];
+    json createdAtJson = prof["created_at"];
+    string appliedDate = createdAtJson is () ? "" : createdAtJson.toString();
+    json invIdJson = prof["invitation_id"];
+    
+    if invIdJson is () {
+        return {name: string `Candidate #${candidateId.substring(0, 8)}`, email: "Not Available", role: "Unknown Role", appliedDate: appliedDate, jobId: ""};
+    }
+    string invId = invIdJson.toString();
 
     string invPath = string `/rest/v1/interview_invitations?id=eq.${invId}&select=candidate_name,candidate_email,job_title`;
     http:Response invResp = check clients:supabaseHttpClient->get(
         invPath, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if invResp.statusCode >= 300 {
-        return error("getCandidateContact: invitation lookup failed for id " + invId);
+        return error("getCandidateTranscriptMetadata: invitation lookup failed for " + invId);
     }
     json[] invs = <json[]>check invResp.getJsonPayload();
     if invs.length() == 0 {
-        return error("getCandidateContact: invitation record not found " + invId);
+        return {name: string `Candidate #${candidateId.substring(0, 8)}`, email: "Not Available", role: "Unknown Role", appliedDate: appliedDate, jobId: ""};
     }
     map<json> inv = <map<json>>invs[0];
-    return {candidateName: inv["candidate_name"].toString(), candidateEmail: inv["candidate_email"].toString(), jobTitle: inv["job_title"].toString()};
+    return {
+        name: inv["candidate_name"].toString(), 
+        email: inv["candidate_email"].toString(), 
+        role: inv["job_title"].toString(),
+        appliedDate: appliedDate,
+        jobId: prof["job_id"].toString()
+    };
 }
 
 public function getCandidateEvaluation(string candidateId) returns record {|decimal overallScore; decimal cvScore; decimal skillsScore; decimal interviewScore; string summaryFeedback;|}|error {
     string path = string `/rest/v1/evaluation_results?candidate_id=eq.${candidateId}&select=overall_score,cv_score,skills_score,interview_score,summary_feedback`;
     http:Response resp = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if resp.statusCode >= 300 {
         return error("getCandidateEvaluation failed for " + candidateId);
     }
     json[] evals = <json[]>check resp.getJsonPayload();
     if evals.length() == 0 {
-        return error("Evaluation not found for candidate " + candidateId);
+        // Log the failure to find
+        return error("No evaluation results found for candidate " + candidateId);
     }
     map<json> e = <map<json>>evals[0];
 
@@ -278,6 +353,13 @@ public function getCandidateEvaluation(string candidateId) returns record {|deci
 
     string feedback = e["summary_feedback"] is () ? "" : e["summary_feedback"].toString();
     return {overallScore: overall, cvScore: cv, skillsScore: skills, interviewScore: interview, summaryFeedback: feedback};
+}
+
+public function getRawEvaluation(string candidateId) returns json|error {
+    string path = string `/rest/v1/evaluation_results?candidate_id=eq.${candidateId}&select=*`;
+    http:Response resp = check clients:supabaseHttpClient->get(
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+    return resp.getJsonPayload();
 }
 
 public function updateCandidateStatus(string candidateId, string newStatus) returns error? {
