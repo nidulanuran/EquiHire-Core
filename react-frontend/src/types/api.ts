@@ -105,5 +105,11 @@ export interface TranscriptResponse {
   interviewScore: number;
   summaryFeedback: string;
   transcript: TranscriptItem[];
+  education?: any;
+  workExperience?: any;
+  projects?: any;
+  technicalSkills?: any;
+  achievements?: any;
+  certificates?: any;
+  phone?: string;
 }
-

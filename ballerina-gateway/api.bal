@@ -374,7 +374,10 @@ service /api on apiListener {
             log:printWarn("Could not fetch contact info for email, skipping email",
                     candidateId = candidateId, 'error = contact);
         } else {
-            if pass {
+            log:printInfo("Contact info fetched for email", candidateId = candidateId, email = contact.candidateEmail);
+            if contact.candidateEmail == "" {
+                 log:printWarn("Candidate email is empty, skipping email", candidateId = candidateId);
+            } else if pass {
                 string acceptanceMsg = "<p>We are pleased to inform you that you have successfully passed the technical evaluation for <strong>"
                         + contact.jobTitle + "</strong> and you are hired!</p>"
                         + "<p><strong>Your Evaluation Results:</strong><br>"
@@ -445,19 +448,15 @@ service /api on apiListener {
 
         var transcriptResult = repositories:getCandidateTranscript(candidateId);
         if transcriptResult is error {
-            log:printError("Failed to fetch transcript", 'error = transcriptResult, candidateId = candidateId);
-            return <http:InternalServerError>{body: {"error": "Failed to fetch candidate transcript"}};
+            log:printError("Failed to fetch transcript items", 'error = transcriptResult, candidateId = candidateId);
+            return <http:InternalServerError>{body: {"error": "Failed to fetch candidate transcript items"}};
         }
 
-        string|error nameResult = repositories:getCandidateDisplayName(candidateId);
-        string name = nameResult is error ? "Unknown Candidate" : nameResult;
-
-        // Audit: Transcript Viewed
-        string|error txOrgId = repositories:getOrganizationIdForCandidate(candidateId);
-        if txOrgId is string {
-            _ = start repositories:createAuditLog(
-                txOrgId, (), constants:AUDIT_TRANSCRIPT_GENERATED, "Candidate", candidateId,
-                {"candidateName": name, "questionCount": transcriptResult.length()});
+        // Fetch full candidate metadata (name, email, role, applied date)
+        var meta = repositories:getCandidateTranscriptMetadata(candidateId);
+        if meta is error {
+            log:printError("Failed to fetch transcript metadata", 'error = meta, candidateId = candidateId);
+            return <http:InternalServerError>{body: {"error": "Failed to fetch candidate metadata"}};
         }
 
         var evalResult2 = repositories:getCandidateEvaluation(candidateId);
@@ -474,18 +473,33 @@ service /api on apiListener {
             txFeedback = evalResult2.summaryFeedback;
         }
 
+        // Audit: Transcript Viewed
+        string|error txOrgId = repositories:getOrganizationIdForCandidate(candidateId);
+        if txOrgId is string {
+            _ = start repositories:createAuditLog(
+                txOrgId, (), constants:AUDIT_TRANSCRIPT_GENERATED, "Candidate", candidateId,
+                {"candidateName": meta.name, "questionCount": transcriptResult.length()});
+        }
+
         return {
             candidateId: candidateId,
-            candidateName: name,
-            candidateEmail: "",
-            jobTitle: "",
-            appliedDate: "",
+            candidateName: meta.name,
+            candidateEmail: meta.email,
+            jobTitle: meta.role,
+            appliedDate: meta.appliedDate,
             overallScore: txOverall,
             cvScore: txCv,
             skillsScore: txSkills,
             interviewScore: txInterview,
             summaryFeedback: txFeedback,
-            transcript: transcriptResult
+            transcript: transcriptResult,
+            education: meta.education,
+            workExperience: meta.workExperience,
+            projects: meta.projects,
+            technicalSkills: meta.technicalSkills,
+            achievements: meta.achievements,
+            certificates: meta.certificates,
+            phone: meta.phone
         };
     }
 

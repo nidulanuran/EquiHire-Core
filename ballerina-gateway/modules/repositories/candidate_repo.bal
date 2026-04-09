@@ -286,44 +286,151 @@ public function getCvRawText(string candidateId) returns string|error {
     return rawText is () ? "" : rawText.toString();
 }
 
-public function getCandidateTranscriptMetadata(string candidateId) returns record {|string name; string email; string role; string appliedDate; string jobId;|}|error {
-    string profPath = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=invitation_id,created_at,job_id`;
-    http:Response profResp = check clients:supabaseHttpClient->get(
-        profPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
-    if profResp.statusCode >= 300 {
-        return error("getCandidateTranscriptMetadata: profile lookup failed for " + candidateId);
+public function getCandidateTranscriptMetadata(string candidateId) returns record {|
+    string name; string email; string role; string appliedDate; string jobId;
+    json education; json workExperience; json projects; json technicalSkills;
+    json achievements; json certificates; string phone;
+|}|error {
+    string path = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=created_at,invitation_id,job_id`;
+    http:Response response = check clients:supabaseHttpClient->get(
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+    
+    if response.statusCode >= 300 {
+        return error("getMetadata: failed to fetch profile " + candidateId);
     }
-    json[] profs = <json[]>check profResp.getJsonPayload();
-    if profs.length() == 0 {
-        return error("getCandidateTranscriptMetadata: no profile for " + candidateId);
-    }
-    map<json> prof = <map<json>>profs[0];
-    json createdAtJson = prof["created_at"];
-    string appliedDate = createdAtJson is () ? "" : createdAtJson.toString();
+    
+    json[] profiles = <json[]>check response.getJsonPayload();
+    if profiles.length() == 0 { return error("Profile not found"); }
+    map<json> prof = <map<json>>profiles[0];
+    string appliedDate = prof["created_at"].toString();
     json invIdJson = prof["invitation_id"];
     
+    // Fetch CV data (education, etc.)
+    json education = [];
+    json workExperience = [];
+    json projects = [];
+    json technicalSkills = [];
+    json achievements = [];
+    json certificates = [];
+    
+    string cvPath = string `/rest/v1/cv_parsed_sections?candidate_id=eq.${candidateId}&select=education,work_experience,projects,technical_skills,achievements,certificates`;
+    http:Response cvResp = check clients:supabaseHttpClient->get(cvPath, headers = clients:getSupabaseHeaders());
+    if cvResp.statusCode < 300 {
+        json[] cvs = <json[]>check cvResp.getJsonPayload();
+        if cvs.length() > 0 {
+            map<json> cv = <map<json>>cvs[0];
+            education = cv["education"];
+            workExperience = cv["work_experience"];
+            projects = cv["projects"];
+            technicalSkills = cv["technical_skills"];
+            achievements = cv["achievements"];
+            certificates = cv["certificates"];
+        }
+    }
+
+    // Try to get fallback Contact info from PII map
+    string fallbackName = string `Candidate #${candidateId.substring(0, 8)}`;
+    string fallbackEmail = "Not Available";
+    string phone = "Not Available";
+
+    map<json> piiMap = check getPiiRedactionMap(candidateId);
+    foreach [string, json] [original, redacted] in piiMap.entries() {
+        string r = redacted.toString();
+        if r == "[REDACTED_NAME]" && fallbackName.startsWith("Candidate #") {
+            fallbackName = original;
+        } else if r == "[REDACTED_EMAIL]" && fallbackEmail == "Not Available" {
+            fallbackEmail = original;
+        } else if r == "[REDACTED_PHONE]" && phone == "Not Available" {
+            phone = original;
+        }
+    }
+
     if invIdJson is () {
-        return {name: string `Candidate #${candidateId.substring(0, 8)}`, email: "Not Available", role: "Unknown Role", appliedDate: appliedDate, jobId: ""};
+        string jobId = prof["job_id"].toString();
+        string jobTitle = "Unknown Role";
+        // Attempt to fetch job title from jobs table
+        string jobPath = string `/rest/v1/jobs?id=eq.${jobId}&select=title`;
+        http:Response jResp = check clients:supabaseHttpClient->get(jobPath, headers = clients:getSupabaseHeaders());
+        if jResp.statusCode < 300 {
+            json[] jobs = <json[]>check jResp.getJsonPayload();
+            if jobs.length() > 0 {
+                jobTitle = (<map<json>>jobs[0])["title"].toString();
+            }
+        }
+        return {
+            name: fallbackName,
+            email: fallbackEmail,
+            role: jobTitle,
+            appliedDate: appliedDate,
+            jobId: jobId,
+            education: education,
+            workExperience: workExperience,
+            projects: projects,
+            technicalSkills: technicalSkills,
+            achievements: achievements,
+            certificates: certificates,
+            phone: phone
+        };
     }
     string invId = invIdJson.toString();
 
     string invPath = string `/rest/v1/interview_invitations?id=eq.${invId}&select=candidate_name,candidate_email,job_title`;
-    http:Response invResp = check clients:supabaseHttpClient->get(
+    http:Response iResp = check clients:supabaseHttpClient->get(
         invPath, headers = clients:getSupabaseHeaders(), targetType = http:Response);
-    if invResp.statusCode >= 300 {
-        return error("getCandidateTranscriptMetadata: invitation lookup failed for " + invId);
+    
+    if iResp.statusCode >= 300 {
+        return {
+            name: fallbackName,
+            email: fallbackEmail,
+            role: "Role Unavailable",
+            appliedDate: appliedDate,
+            jobId: prof["job_id"].toString(),
+            education: education,
+            workExperience: workExperience,
+            projects: projects,
+            technicalSkills: technicalSkills,
+            achievements: achievements,
+            certificates: certificates,
+            phone: phone
+        };
     }
-    json[] invs = <json[]>check invResp.getJsonPayload();
+    
+    json[] invs = <json[]>check iResp.getJsonPayload();
     if invs.length() == 0 {
-        return {name: string `Candidate #${candidateId.substring(0, 8)}`, email: "Not Available", role: "Unknown Role", appliedDate: appliedDate, jobId: ""};
+        return {
+            name: fallbackName,
+            email: fallbackEmail,
+            role: "Role Unavailable",
+            appliedDate: appliedDate,
+            jobId: prof["job_id"].toString(),
+            education: education,
+            workExperience: workExperience,
+            projects: projects,
+            technicalSkills: technicalSkills,
+            achievements: achievements,
+            certificates: certificates,
+            phone: phone
+        };
     }
+    
     map<json> inv = <map<json>>invs[0];
+    string name = inv["candidate_name"] is () ? fallbackName : inv["candidate_name"].toString();
+    string email = inv["candidate_email"] is () ? fallbackEmail : inv["candidate_email"].toString();
+    string role = inv["job_title"] is () ? "Unknown Role" : inv["job_title"].toString();
+
     return {
-        name: inv["candidate_name"].toString(), 
-        email: inv["candidate_email"].toString(), 
-        role: inv["job_title"].toString(),
+        name: name,
+        email: email,
+        role: role,
         appliedDate: appliedDate,
-        jobId: prof["job_id"].toString()
+        jobId: prof["job_id"].toString(),
+        education: education,
+        workExperience: workExperience,
+        projects: projects,
+        technicalSkills: technicalSkills,
+        achievements: achievements,
+        certificates: certificates,
+        phone: phone
     };
 }
 
@@ -398,6 +505,17 @@ public function insertPiiEntityMap(string candidateId, json entities, json redac
     if response.statusCode >= 300 {
         json err = check response.getJsonPayload();
         return error("insertPiiEntityMap failed for " + candidateId + ": " + err.toString());
+    }
+}
+
+public function linkCandidateToInvitation(string candidateId, string invitationId) returns error? {
+    json payload = {"invitation_id": invitationId};
+    string path  = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}`;
+    http:Response response = check clients:supabaseHttpClient->patch(
+        path, payload, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+    if response.statusCode >= 300 {
+        json err = check response.getJsonPayload();
+        return error("linkCandidateToInvitation failed for " + candidateId + ": " + err.toString());
     }
 }
 

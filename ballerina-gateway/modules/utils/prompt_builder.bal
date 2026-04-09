@@ -5,6 +5,7 @@
 public function buildCvParsePrompt(string rawCvText) returns string {
     return string `You are an expert CV/Resume parser. Extract structured data from the following CV text.
 Return a JSON object with these fields:
+- "contact": { "fullName": "...", "email": "...", "phone": "..." }
 - "sections": { "education": [...], "work_experience": [...], "projects": [...], "achievements": [...], "certificates": [...] }
 - "detectedStack": ["Python", "React", ...]  (technologies found)
 - "experienceLevel": "Junior" | "Mid" | "Senior"  (estimated level)

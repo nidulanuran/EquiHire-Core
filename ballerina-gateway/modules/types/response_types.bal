@@ -118,4 +118,11 @@ public type TranscriptResponse record {|
     float interviewScore;
     string summaryFeedback;
     TranscriptItem[] transcript;
+    json education;
+    json workExperience;
+    json projects;
+    json technicalSkills;
+    json achievements;
+    json certificates;
+    string phone;
 |};

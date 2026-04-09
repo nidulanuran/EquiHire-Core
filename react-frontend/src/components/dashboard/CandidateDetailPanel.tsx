@@ -2,6 +2,7 @@
  * @fileoverview Side panel showing selected candidate details: scores, context, timeline, and actions.
  */
 
+import { useState } from 'react';
 import {
   Lock,
   Check,
@@ -14,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { API } from '@/lib/api';
 import type { ExtendedCandidate } from '@/types';
+import { TranscriptModal } from './TranscriptModal';
 
 export interface CandidateDetailPanelProps {
   candidate: ExtendedCandidate;
@@ -30,10 +32,13 @@ export function CandidateDetailPanel({
   onClose,
   onApplyDecision,
 }: CandidateDetailPanelProps) {
+  const [showTranscript, setShowTranscript] = useState(false);
+
   const isDecisionMade = ['accepted', 'rejected'].includes(candidate.status);
   const canViewTranscript = candidate.status === 'accepted';
 
   return (
+    <>
     <div className="w-[400px] flex flex-col space-y-4 animate-in slide-in-from-right-10 duration-300">
       <div className="flex justify-between items-center h-8">
         <h3 className="font-bold text-gray-900">Candidate Details</h3>
@@ -354,21 +359,7 @@ export function CandidateDetailPanel({
                 <Button
                   className="w-full"
                   variant="outline"
-                  onClick={() => {
-                    const params = new URLSearchParams({
-                      candidateId: candidate.candidateId,
-                      candidateName: candidate.candidateName,
-                      candidateEmail: '',
-                      jobTitle: candidate.jobTitle,
-                      appliedDate: candidate.appliedDate,
-                      overallScore: String(candidate.score ?? 0),
-                      cvScore: String(candidate.cvScore ?? 0),
-                      skillsScore: String(candidate.skillsScore ?? 0),
-                      interviewScore: String(candidate.interviewScore ?? 0),
-                      summaryFeedback: candidate.summaryFeedback ?? '',
-                    });
-                    window.open(`/transcript?${params.toString()}`, '_blank');
-                  }}
+                  onClick={() => setShowTranscript(true)}
                 >
                   <FileText className="w-4 h-4 mr-2" aria-hidden />
                   View Full Transcript
@@ -388,5 +379,14 @@ export function CandidateDetailPanel({
         </CardContent>
       </Card>
     </div>
+
+    {/* Transcript Modal — overlays the full screen */}
+    {showTranscript && (
+      <TranscriptModal
+        candidate={candidate}
+        onClose={() => setShowTranscript(false)}
+      />
+    )}
+    </>
   );
 }
