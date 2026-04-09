@@ -2,6 +2,7 @@
  * @fileoverview Side panel showing selected candidate details: scores, context, timeline, and actions.
  */
 
+import { useState } from 'react';
 import {
   Lock,
   Check,
@@ -11,7 +12,6 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { API } from '@/lib/api';
 import type { ExtendedCandidate } from '@/types';
@@ -19,7 +19,6 @@ import { TranscriptModal } from './TranscriptModal';
 
 export interface CandidateDetailPanelProps {
   candidate: ExtendedCandidate;
-  threshold: number;
   isProcessing: boolean;
   onClose: () => void;
   onApplyDecision: (candidateId: string, decision: 'accepted' | 'rejected') => Promise<void>;
@@ -29,16 +28,17 @@ const AVATAR_URL = 'https://api.dicebear.com/7.x/avataaars/svg';
 
 export function CandidateDetailPanel({
   candidate,
-  threshold,
   isProcessing,
   onClose,
   onApplyDecision,
 }: CandidateDetailPanelProps) {
+  const [showTranscript, setShowTranscript] = useState(false);
+
   const isDecisionMade = ['accepted', 'rejected'].includes(candidate.status);
   const canViewTranscript = candidate.status === 'accepted';
-  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
 
   return (
+    <>
     <div className="w-[400px] flex flex-col space-y-4 animate-in slide-in-from-right-10 duration-300">
       <div className="flex justify-between items-center h-8">
         <h3 className="font-bold text-gray-900">Candidate Details</h3>
@@ -86,7 +86,7 @@ export function CandidateDetailPanel({
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
               <div
-                className={`h-2 rounded-full transition-all duration-500 ${candidate.score >= threshold ? 'bg-[#FF7300]' : 'bg-red-400'}`}
+                className={`h-2 rounded-full transition-all duration-500 ${candidate.score >= 70 ? 'bg-[#FF7300]' : 'bg-red-400'}`}
                 style={{ width: `${candidate.score}%` }}
               />
             </div>
@@ -342,9 +342,14 @@ export function CandidateDetailPanel({
                   onClick={async () => {
                     try {
                       const res = await API.revealCandidate(candidate.candidateId);
-                      if (res.url) window.open(res.url, '_blank');
+                      if (res.url) {
+                        window.open(res.url, '_blank');
+                      } else {
+                         window.alert('The original CV file could not be found in storage.');
+                      }
                     } catch (err) {
                       console.error('Failed to reveal CV:', err);
+                      window.alert('Failed to retrieve the CV. The file may no longer be available in storage.');
                     }
                   }}
                 >
@@ -354,7 +359,7 @@ export function CandidateDetailPanel({
                 <Button
                   className="w-full"
                   variant="outline"
-                  onClick={() => setIsTranscriptOpen(true)}
+                  onClick={() => setShowTranscript(true)}
                 >
                   <FileText className="w-4 h-4 mr-2" aria-hidden />
                   View Full Transcript
@@ -373,12 +378,15 @@ export function CandidateDetailPanel({
           </div>
         </CardContent>
       </Card>
-      
-      <TranscriptModal 
-        candidateId={candidate.candidateId} 
-        isOpen={isTranscriptOpen} 
-        onClose={() => setIsTranscriptOpen(false)} 
-      />
     </div>
+
+    {/* Transcript Modal — overlays the full screen */}
+    {showTranscript && (
+      <TranscriptModal
+        candidate={candidate}
+        onClose={() => setShowTranscript(false)}
+      />
+    )}
+    </>
   );
 }

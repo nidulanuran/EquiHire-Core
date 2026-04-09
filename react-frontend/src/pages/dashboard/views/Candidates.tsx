@@ -2,11 +2,11 @@
  * Candidates View
  *
  * Dashboard view for managing the hiring pipeline: list candidates, filter by status/activity,
- * view details (scores, context, timeline), and accept/reject with configurable threshold.
+ * view details (scores, context, timeline), and accept/reject.
  *
  * Structure:
  * - useCandidates: data loading, filters, selection, and decision actions
- * - CandidateFilters: status dropdown, seen/unseen toggle, threshold input
+ * - CandidateFilters: status dropdown, seen/unseen toggle, weightage adjustment
  * - CandidateListTable: scrollable table with loading/empty states
  * - CandidateDetailPanel: slide-in panel with scores, context, timeline, actions
  */
@@ -30,20 +30,12 @@ export default function CandidateManager() {
   const {
     filteredCandidates,
     selectedCandidate,
-    threshold,
     isLoading,
     isProcessing,
     statusFilter,
     setStatusFilter,
     activityFilter,
     setActivityFilter,
-    setThreshold,
-    cvWeight,
-    setCvWeight,
-    skillsWeight,
-    setSkillsWeight,
-    interviewWeight,
-    setInterviewWeight,
     setSelectedCandidate,
     handleViewDetails,
     handleAcceptCandidate,
@@ -61,16 +53,21 @@ export default function CandidateManager() {
   // Wrapper function to handle accept/reject decisions with user feedback
   const handleApplyDecision = async (candidateId: string, decision: 'accepted' | 'rejected') => {
     try {
+      let result: any;
       if (decision === 'accepted') {
-        await handleAcceptCandidate(candidateId);
-        showToast('success', 'Candidate accepted! Acceptance email sent.');
+        result = await handleAcceptCandidate(candidateId);
       } else {
-        await handleRejectCandidate(candidateId);
-        showToast('success', 'Candidate rejected. Rejection email sent.');
+        result = await handleRejectCandidate(candidateId);
+      }
+
+      if (result?.emailSent) {
+        showToast('success', `Candidate ${decision}! Decision email has been sent successfully.`);
+      } else {
+        showToast('success', `Candidate ${decision}, but the contact email was unavailable or failed to send.`);
       }
     } catch (error) {
       console.error(`Failed to ${decision} candidate:`, error);
-      showToast('error', `Failed to ${decision} candidate. Please try again.`);
+      showToast('error', `Failed to ${decision} candidate. Please check your connection.`);
     }
   };
 
@@ -134,14 +131,6 @@ export default function CandidateManager() {
             onStatusChange={setStatusFilter}
             activityFilter={activityFilter}
             onActivityChange={setActivityFilter}
-            threshold={threshold}
-            onThresholdChange={setThreshold}
-            cvWeight={cvWeight}
-            onCvWeightChange={setCvWeight}
-            skillsWeight={skillsWeight}
-            onSkillsWeightChange={setSkillsWeight}
-            interviewWeight={interviewWeight}
-            onInterviewWeightChange={setInterviewWeight}
           />
         </div>
 
@@ -156,7 +145,6 @@ export default function CandidateManager() {
           <div className="flex-1 overflow-hidden">
             <CandidatePipeline
               candidates={filteredCandidates}
-              threshold={threshold}
               selectedId={selectedCandidate?.candidateId ?? null}
               onSelectCandidate={handleViewDetails}
             />
@@ -168,7 +156,6 @@ export default function CandidateManager() {
       {selectedCandidate && (
         <CandidateDetailPanel
           candidate={selectedCandidate}
-          threshold={threshold}
           isProcessing={isProcessing}
           onClose={() => setSelectedCandidate(null)}
           onApplyDecision={handleApplyDecision}
