@@ -34,11 +34,9 @@ export interface UseCandidatesResult {
   /** Mark a candidate as seen and optionally open detail panel */
   handleViewDetails: (candidate: ExtendedCandidate) => void;
   /** Accept candidate and send acceptance email */
-  handleAcceptCandidate: (candidateId: string) => Promise<void>;
+  handleAcceptCandidate: (candidateId: string) => Promise<unknown>;
   /** Reject candidate and send rejection email with scores */
-  handleRejectCandidate: (candidateId: string) => Promise<void>;
-  /** Apply accept/reject decision and refresh list */
-  handleApplyDecision: (candidateId: string) => Promise<void>;
+  handleRejectCandidate: (candidateId: string) => Promise<unknown>;
   /** Refetch candidates (e.g. after decision) */
   refreshCandidates: () => Promise<void>;
 }
@@ -128,40 +126,17 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
     [markAsSeen]
   );
 
-  const handleApplyDecision = useCallback(
-    async (candidateId: string) => {
-      setIsProcessing(true);
-      try {
-        await API.decideCandidate(candidateId, 'accepted'); // Default to accepted if called directly from generic handler
-        await fetchCandidates(orgId);
-
-        // Refresh the selected candidate to show revealed PII
-        const updatedCandidates = await API.getCandidates(orgId) as unknown as ExtendedCandidate[];
-        const updated = updatedCandidates.find(c => c.candidateId === candidateId);
-        if (updated) setSelectedCandidate(updated);
-      } catch (error) {
-        console.error('Decision failed:', error);
-      } finally {
-        setIsProcessing(false);
-      }
-    },
-    [orgId, fetchCandidates]
-  );
-
   const handleAcceptCandidate = useCallback(
     async (candidateId: string) => {
       setIsProcessing(true);
       try {
-        // Backend handles acceptance email in the decide endpoint
         const res = await API.decideCandidate(candidateId, 'accepted');
-
-        // Refresh candidates list and selected candidate details
-        await fetchCandidates(orgId);
-        const updatedCandidates = await API.getCandidates(orgId) as unknown as ExtendedCandidate[];
+        // Single fetch — derive selectedCandidate from the refreshed list
+        const updatedCandidates = (await API.getCandidates(orgId)) as unknown as ExtendedCandidate[];
+        setCandidates(updatedCandidates);
         const updated = updatedCandidates.find(c => c.candidateId === candidateId);
         if (updated) setSelectedCandidate(updated);
-
-        return res as any;
+        return res as unknown;
       } catch (error) {
         console.error('Accept failed:', error);
         throw error;
@@ -169,23 +144,20 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
         setIsProcessing(false);
       }
     },
-    [orgId, fetchCandidates]
+    [orgId]
   );
 
   const handleRejectCandidate = useCallback(
     async (candidateId: string) => {
       setIsProcessing(true);
       try {
-        // Backend handles rejection email with scores in the decide endpoint
         const res = await API.decideCandidate(candidateId, 'rejected');
-
-        // Refresh candidates list and selected candidate details
-        await fetchCandidates(orgId);
-        const updatedCandidates = await API.getCandidates(orgId) as unknown as ExtendedCandidate[];
+        // Single fetch — derive selectedCandidate from the refreshed list
+        const updatedCandidates = (await API.getCandidates(orgId)) as unknown as ExtendedCandidate[];
+        setCandidates(updatedCandidates);
         const updated = updatedCandidates.find(c => c.candidateId === candidateId);
         if (updated) setSelectedCandidate(updated);
-
-        return res as any;
+        return res as unknown;
       } catch (error) {
         console.error('Reject failed:', error);
         throw error;
@@ -193,7 +165,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
         setIsProcessing(false);
       }
     },
-    [orgId, fetchCandidates]
+    [orgId]
   );
 
 
@@ -212,7 +184,6 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
     handleViewDetails,
     handleAcceptCandidate,
     handleRejectCandidate,
-    handleApplyDecision,
     refreshCandidates,
   };
 }

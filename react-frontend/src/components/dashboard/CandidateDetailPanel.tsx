@@ -33,6 +33,8 @@ export function CandidateDetailPanel({
   onApplyDecision,
 }: CandidateDetailPanelProps) {
   const [showTranscript, setShowTranscript] = useState(false);
+  const [isRevealingCv, setIsRevealingCv] = useState(false);
+  const [cvRevealError, setCvRevealError] = useState<string | null>(null);
 
   const isDecisionMade = ['accepted', 'rejected'].includes(candidate.status);
   const canViewTranscript = candidate.status === 'accepted';
@@ -339,23 +341,35 @@ export function CandidateDetailPanel({
               <div className="flex flex-col gap-2">
                 <Button
                   className="w-full bg-primary hover:bg-primary/90 text-white"
+                  disabled={isRevealingCv}
                   onClick={async () => {
+                    setIsRevealingCv(true);
+                    setCvRevealError(null);
                     try {
                       const res = await API.revealCandidate(candidate.candidateId);
                       if (res.url) {
-                        window.open(res.url, '_blank');
+                        window.open(res.url, '_blank', 'noopener,noreferrer');
                       } else {
-                         window.alert('The original CV file could not be found in storage.');
+                        setCvRevealError('The original CV file could not be found in storage.');
                       }
                     } catch (err) {
                       console.error('Failed to reveal CV:', err);
-                      window.alert('Failed to retrieve the CV. The file may no longer be available in storage.');
+                      setCvRevealError('Failed to retrieve the CV. The file may no longer be available.');
+                    } finally {
+                      setIsRevealingCv(false);
                     }
                   }}
                 >
-                  <FileText className="w-4 h-4 mr-2" aria-hidden />
+                  {isRevealingCv ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden />
+                  ) : (
+                    <FileText className="w-4 h-4 mr-2" aria-hidden />
+                  )}
                   View Original CV (PII)
                 </Button>
+                {cvRevealError && (
+                  <p className="text-xs text-red-600 px-1">{cvRevealError}</p>
+                )}
                 <Button
                   className="w-full"
                   variant="outline"

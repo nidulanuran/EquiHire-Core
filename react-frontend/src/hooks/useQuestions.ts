@@ -67,19 +67,23 @@ export function useQuestions({ userId }: UseQuestionsOptions): UseQuestionsResul
   useEffect(() => {
     if (!userId) return;
     API.getJobs(userId)
-      .then((data) => {
+      .then(async (data) => {
         setJobs(data as JobWithOrg[]);
-        data.forEach((job: Job) => {
-          if (job.id) {
-            API.getJobQuestions(job.id)
-              .then((qs: Question[]) =>
-                setQuestionCounts((prev) => ({ ...prev, [job.id as string]: qs.length }))
-              )
-              .catch(() =>
-                setQuestionCounts((prev) => ({ ...prev, [job.id as string]: 0 }))
-              );
-          }
-        });
+        // Fetch all question counts in parallel instead of sequentially
+        const jobsWithId = data.filter((job: Job) => job.id);
+        const counts = await Promise.all(
+          jobsWithId.map((job: Job) =>
+            API.getJobQuestions(job.id as string)
+              .then((qs: Question[]) => ({ id: job.id as string, count: qs.length }))
+              .catch(() => ({ id: job.id as string, count: 0 }))
+          )
+        );
+        setQuestionCounts(
+          counts.reduce<Record<string, number>>((acc, { id, count }) => {
+            acc[id] = count;
+            return acc;
+          }, {})
+        );
       })
       .catch((err) => {
         console.error('Failed to load jobs', err);
