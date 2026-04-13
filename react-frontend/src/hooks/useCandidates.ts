@@ -34,9 +34,9 @@ export interface UseCandidatesResult {
   /** Mark a candidate as seen and optionally open detail panel */
   handleViewDetails: (candidate: ExtendedCandidate) => void;
   /** Accept candidate and send acceptance email */
-  handleAcceptCandidate: (candidateId: string) => Promise<void>;
+  handleAcceptCandidate: (candidateId: string) => Promise<unknown>;
   /** Reject candidate and send rejection email with scores */
-  handleRejectCandidate: (candidateId: string) => Promise<void>;
+  handleRejectCandidate: (candidateId: string) => Promise<unknown>;
   /** Refetch candidates (e.g. after decision) */
   refreshCandidates: () => Promise<void>;
 }
