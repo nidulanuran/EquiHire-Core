@@ -17,6 +17,7 @@ export default function CandidateInterview() {
     const [timeLeft, setTimeLeft] = useState(45 * 60);
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -140,14 +141,20 @@ export default function CandidateInterview() {
         };
     }, [loading, error, isSubmitted, addCheatEvent]);
 
+    // Use a ref so the timer effect can always call the latest submit without
+    // being listed as a dependency (which would restart the interval on every keystroke).
+    const submitPayloadRef = useRef<((isAutoSubmit: boolean) => Promise<void>) | null>(null);
+
     const submitPayload = useCallback(async (isAutoSubmit: boolean) => {
-        setIsSubmitted(true);
+        if (isSubmitting || isSubmitted) return;
+        setIsSubmitting(true);
         try {
             const candidateId = sessionStorage.getItem('candidateId');
             const candidateDataStr = sessionStorage.getItem('candidateData');
-            
+
             if (!candidateId || !candidateDataStr) {
                 setError("Missing session data. Cannot submit assessment.");
+                setIsSubmitting(false);
                 return;
             }
 
@@ -171,35 +178,44 @@ export default function CandidateInterview() {
 
             await API.submitCandidateAnswers(candidateId, payload);
 
-            // Clean up
-            sessionStorage.removeItem('invite_token');
+            // Clean up session data after successful submission
             sessionStorage.removeItem('candidateData');
             sessionStorage.removeItem('candidateId');
-            
+
             if (document.fullscreenElement) {
                 document.exitFullscreen().catch(() => {});
             }
 
+            setIsSubmitted(true);
         } catch (err) {
             console.error(err);
-            setError("Failed to submit assessment.");
+            setError("Failed to submit assessment. Please contact the recruiter.");
+        } finally {
+            setIsSubmitting(false);
         }
-    }, [answers, questions, sessionId]);
+    }, [answers, questions, sessionId, isSubmitting, isSubmitted]);
+
+    // Keep the ref in sync so the timer can always call the latest version.
+    useEffect(() => {
+        submitPayloadRef.current = submitPayload;
+    }, [submitPayload]);
 
     const handleSubmitClick = () => submitPayload(false);
 
-    // Timer & Question time tracker
+    // Timer & Question time tracker.
+    // Intentionally NOT listing submitPayload in deps — we call it via submitPayloadRef
+    // so the interval is never restarted by answer-state changes (which would reset the countdown).
     useEffect(() => {
         if (loading || error || isSubmitted || questions.length === 0) return;
-        
+
         const currentQId = questions[currentQuestionIndex]?.id;
 
         const timer = setInterval(() => {
             setTimeLeft((prev) => {
-                if (prev <= 1) { 
-                    clearInterval(timer); 
-                    submitPayload(true); 
-                    return 0; 
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    submitPayloadRef.current?.(true);
+                    return 0;
                 }
                 return prev - 1;
             });
@@ -207,10 +223,10 @@ export default function CandidateInterview() {
             if (currentQId) {
                 timeSpentPerQuestion.current[currentQId] = (timeSpentPerQuestion.current[currentQId] || 0) + 1;
             }
-
         }, 1000);
         return () => clearInterval(timer);
-    }, [loading, error, isSubmitted, questions, currentQuestionIndex, submitPayload]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, error, isSubmitted, questions.length, currentQuestionIndex]);
 
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
@@ -243,6 +259,18 @@ export default function CandidateInterview() {
                 <div className="flex flex-col items-center gap-4">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                     <p className="text-gray-500">Loading your assessment...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (isSubmitting) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center font-sans text-gray-900">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+                    <p className="text-gray-600 font-semibold">Submitting your assessment…</p>
+                    <p className="text-gray-400 text-sm">Please do not close this window.</p>
                 </div>
             </div>
         );
@@ -322,9 +350,10 @@ export default function CandidateInterview() {
                             </span>
                         </div>
                     </div>
-                    <Button 
+                    <Button
                         onClick={handleSubmitClick}
-                        className="bg-[#FF7300] hover:bg-[#E56700] text-white px-8 h-11 rounded-lg font-bold shadow-md hover:shadow-lg transition-all"
+                        disabled={isSubmitted || isSubmitting}
+                        className="bg-[#FF7300] hover:bg-[#E56700] text-white px-8 h-11 rounded-lg font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         Finish & Submit
                     </Button>

@@ -76,9 +76,10 @@ export function useJobs({ userId }: UseJobsOptions): UseJobsResult {
         if (cancelled) return;
         if (org?.id) {
           setOrganization({ id: org.id, name: org.name });
-          await fetchTemplates(org.id);
+          await Promise.all([fetchTemplates(org.id), refreshJobs()]);
+        } else {
+          await refreshJobs();
         }
-        await refreshJobs();
       } catch (error) {
         if (!cancelled) console.error('Failed to fetch organization', error);
       }

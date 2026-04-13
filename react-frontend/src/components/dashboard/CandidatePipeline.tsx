@@ -10,7 +10,7 @@ interface CandidatePipelineProps {
 
 const STAGES = [
   { id: 'pending', label: 'Applied', color: 'bg-blue-500' },
-  { id: 'accepted', label: 'Shortlisted', color: 'bg-green-500' },
+  { id: 'accepted', label: 'Accepted', color: 'bg-green-500' },
   { id: 'rejected', label: 'Rejected', color: 'bg-red-500' },
 ];
 
