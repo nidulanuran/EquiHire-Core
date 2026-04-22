@@ -119,4 +119,4 @@ All API calls go to the Ballerina gateway at `http://localhost:9092/api`. Servic
 
 ---
 
-*EquiHire-Core · [github.com/nidulanuran/EquiHire-Core](https://github.com/nidulanuran/EquiHire-Core)*
+*EquiHire-Core 
