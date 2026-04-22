@@ -24,7 +24,7 @@ function testBuildGradingPrompt() {
     test:assertTrue(prompt.includes("What is OOP?"), "Prompt must include the question");
     test:assertTrue(prompt.includes("Junior"), "Prompt must include experience level");
     test:assertTrue(prompt.includes("Java"), "Prompt must include the tech stack");
-    test:assertTrue(prompt.includes("Score (0-100)"), "Prompt must request a numerical score");
+    test:assertTrue(prompt.includes("Score from 0-10"), "Prompt must request a numerical score in the 0-10 range");
 }
 
 @test:Config {}
